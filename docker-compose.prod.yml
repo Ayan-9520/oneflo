@@ -1,0 +1,170 @@
+name: oneflo-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-php-environment: &php-environment
+  APP_NAME: OneFlo
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_URL: https://app.oneflo.in
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: info
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  SESSION_SECURE_COOKIE: "true"
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  FILESYSTEM_DISK: local
+  RUN_MIGRATIONS: "true"
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/nginx/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/letsencrypt:ro
+      - certbot_web:/var/www/certbot
+      - ./infrastructure/nginx/custom:/etc/nginx/conf.d/custom:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  app:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend/Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      <<: *php-environment
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "php -r '$$socket=@fsockopen(\"127.0.0.1\", 9000); if ($$socket) { fclose($$socket); exit(0); } exit(1);'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  queue:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend/Dockerfile
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=3", "--timeout=90"]
+    env_file:
+      - .env.production
+    environment:
+      <<: *php-environment
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend/Dockerfile
+    command: ["php", "artisan", "schedule:work"]
+    env_file:
+      - .env.production
+    environment:
+      <<: *php-environment
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'schedule:work' >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mysql:
+    image: mysql:8.4
+    env_file:
+      - .env.production
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: ["mysqld", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    env_file:
+      - .env.production
+    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --requirepass \"$$REDIS_PASSWORD\""]
+    volumes:
+      - redis_data:/data
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  certbot:
+    image: certbot/certbot:v3.1.0
+    profiles: ["tools"]
+    volumes:
+      - certs:/etc/letsencrypt
+      - certbot_web:/var/www/certbot
+    ports:
+      - "80:80"
+
+volumes:
+  mysql_data:
+  redis_data:
+  storage:
+  certs:
+  certbot_web:

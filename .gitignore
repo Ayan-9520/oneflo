@@ -1,0 +1,12 @@
+.env
+.env.production
+backups/
+apps/backend/.env
+apps/backend/vendor
+apps/backend/node_modules
+apps/backend/storage/*.key
+apps/backend/storage/logs
+apps/backend/bootstrap/cache/*.php
+apps/frontend/node_modules
+apps/frontend/dist
+*.log
