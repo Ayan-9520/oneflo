@@ -81,6 +81,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   function applyAccount(next: Account | null) {
     setAccount(next)
+    if (next) window.localStorage.setItem(sessionHintKey, '1')
+    else window.localStorage.removeItem(sessionHintKey)
     const lockedId = domainLock.current
     const nextOrganizationId = lockedId ?? (next ? storedOrganizationId(next.organizations) : null)
     rememberOrganization(nextOrganizationId)
@@ -171,6 +173,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [account, domainLocked, organizationId, status])
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+}
+
+const sessionHintKey = 'oneflo.signed_in'
+
+/** True when this browser was signed in last time, so the workspace loader is worth showing. */
+export function hasSessionHint() {
+  return typeof window !== 'undefined' && window.localStorage.getItem(sessionHintKey) === '1'
 }
 
 export function useSession() {

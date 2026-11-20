@@ -1,7 +1,7 @@
 import { Navigate, createBrowserRouter, useLocation, RouterProvider } from 'react-router'
 
 import { navigation } from '@/app/navigation'
-import { useSession } from '@/app/session'
+import { hasSessionHint, useSession } from '@/app/session'
 import { AppShell } from '@/components/layout/app-shell'
 import { ErrorState } from '@/components/ui/error-state'
 import { ForgotPasswordPage, ResetPasswordPage } from '@/features/auth/password-pages'
@@ -46,27 +46,30 @@ const moduleRoutes = navigation
 
 function OpeningWorkspace() {
   return (
-    <div className="flex min-h-svh bg-[#f7f6fb] text-[#1c1433]">
-      <aside className="hidden w-72 shrink-0 flex-col bg-[#24156b] px-4 py-5 lg:flex">
-        <BrandMark tone="dark" />
-        <div className="mt-8 flex flex-col gap-2">
-          {['w-40', 'w-32', 'w-36', 'w-28', 'w-40', 'w-24'].map((width) => (
-            <div key={width} className={`h-9 ${width} animate-pulse rounded-full bg-white/10`} />
+    <div role="status" aria-live="polite" className="relative flex min-h-svh items-center justify-center overflow-hidden bg-gradient-to-br from-[#ffe4f2] via-[#f3ecff] to-[#e3edff] px-6 text-[#1c1433]">
+      <div className="pointer-events-none absolute -left-32 -top-32 size-[30rem] animate-pulse rounded-full bg-[#ff9ed2]/40 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-32 size-[34rem] animate-pulse rounded-full bg-[#9cc4ff]/50 blur-3xl [animation-delay:1s]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(58_53_224_/_0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
+      <div className="relative flex flex-col items-center text-center">
+        <div className="relative flex size-36 items-center justify-center">
+          <span className="absolute inset-0 animate-spin rounded-full bg-[conic-gradient(from_0deg,#ff3d9a,#a855f7,#3a35e0,transparent_70%)] [animation-duration:1.6s]" />
+          <span className="absolute inset-[5px] rounded-full bg-[#f7f3ff]" />
+          <span className="absolute inset-4 animate-ping rounded-full bg-[#c4b5fd]/30 [animation-duration:2s]" />
+          <span className="relative flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-2xl font-extrabold text-white shadow-[0_18px_40px_rgb(109_56_214_/_0.4)]">1F</span>
+        </div>
+        <div className="mt-8"><BrandMark /></div>
+        <h1 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">Welcome back</h1>
+        <p className="mt-2 text-sm text-[#6d6586]">Opening your workspace…</p>
+        <div className="mt-6 h-1.5 w-56 overflow-hidden rounded-full bg-white/70">
+          <div className="h-full w-1/3 animate-[oneflo-load_1.4s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-[#ff3d9a] via-[#a855f7] to-[#3a35e0]" />
+        </div>
+        <div className="mt-8 flex flex-wrap justify-center gap-2 text-xs font-semibold text-[#5b4b8a]">
+          {['People', 'Attendance', 'Payroll', 'Recruitment'].map((label, index) => (
+            <span key={label} style={{ animationDelay: `${index * 0.2}s` }} className="animate-pulse rounded-full border border-white bg-white/70 px-3 py-1 shadow-sm backdrop-blur">{label}</span>
           ))}
         </div>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="h-1.5 bg-gradient-to-r from-[#2a1878] via-[#7a2cff] to-[#ff2d87]" />
-        <div className="flex flex-1 flex-col justify-center px-6 py-10 sm:px-10">
-          <BrandMark />
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Opening OneFlo</h1>
-          <p className="mt-2 max-w-md text-sm text-[#6d6586]">Your workspace is being prepared.</p>
-          <div className="mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
-            <div className="h-28 animate-pulse rounded-2xl bg-white shadow-[0_16px_40px_rgb(36_21_107_/_0.08)]" />
-            <div className="h-28 animate-pulse rounded-2xl bg-white shadow-[0_16px_40px_rgb(36_21_107_/_0.08)]" />
-          </div>
-        </div>
       </div>
+      <style>{'@keyframes oneflo-load{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}'}</style>
     </div>
   )
 }
@@ -76,6 +79,7 @@ function RequireAccount() {
   const location = useLocation()
 
   if (status === 'loading') {
+    if (location.pathname === '/' && !hasSessionHint()) return <HomePage />
     return <OpeningWorkspace />
   }
 
