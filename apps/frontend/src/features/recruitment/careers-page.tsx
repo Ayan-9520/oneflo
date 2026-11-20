@@ -431,7 +431,7 @@ function FormField({ label, name, type = 'text', required = false, hint, accept,
   return (
     <label className="block text-sm">
       <span className="font-semibold text-slate-700">{label}{required ? <span className="text-[#e23d9a]"> *</span> : <span className="font-normal text-slate-400"> (optional)</span>}</span>
-      <input name={name} type={type} required={required} accept={accept} min={min} defaultValue={defaultValue ?? undefined} className={`mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/15 ${type === 'file' ? 'cursor-pointer border-2 border-dashed border-[#d9c8ff] bg-[#faf7ff] py-4 file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-[#3a35e0] file:to-[#e23d9a] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-[#a78bfa]' : 'h-12'}`} />
+      <input name={name} type={type} required={required} accept={accept} min={min} defaultValue={defaultValue ?? undefined} className={`mt-1 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-3 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/20 ${type === 'file' ? 'cursor-pointer border-dashed bg-[#faf7ff] py-1.5 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-gradient-to-r file:from-[#3a35e0] file:to-[#e23d9a] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white' : 'h-10'}`} />
       {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
     </label>
   )
@@ -576,29 +576,31 @@ export function CareerJobPage() {
               </div>
             ) : (
               <form key={me?.id ?? 'guest'} onSubmit={(event) => void apply(event)} noValidate={false}>
-                <div className="relative overflow-hidden bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-6 py-7 text-white sm:px-8">
-                  <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-white/15 blur-2xl" />
-                  <p className="relative text-xs font-semibold uppercase tracking-widest text-white/80">Quick application · about 3 minutes</p>
-                  <h2 className="relative mt-1 text-2xl font-extrabold">Apply for {row.title}</h2>
-                  <p className="relative mt-1 text-sm text-white/85">{row.company}{search.get('ref') ? ' · Referred by an employee' : ''}</p>
-                  <div className="relative mt-5 flex flex-wrap gap-2 text-xs font-semibold">
-                    {['Personal', 'Professional', 'Resume & consent'].map((step, index) => <span key={step} className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 backdrop-blur"><span className="flex size-4 items-center justify-center rounded-full bg-white text-[10px] text-[#6d38d6]">{index + 1}</span>{step}</span>)}
+                <div className="relative overflow-hidden bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-5 py-4 text-white sm:px-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-white/75">Apply · about 3 minutes</p>
+                      <h2 className="text-lg font-extrabold leading-tight">{row.title}</h2>
+                      <p className="text-xs text-white/85">{row.company}{search.get('ref') ? ' · Referred by an employee' : ''}</p>
+                    </div>
+                    <div className="flex gap-1.5 text-[11px] font-semibold">
+                      {['Personal', 'Work', 'Resume'].map((step, index) => <span key={step} className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1"><span className="flex size-4 items-center justify-center rounded-full bg-white text-[10px] text-[#6d38d6]">{index + 1}</span>{step}</span>)}
+                    </div>
                   </div>
                 </div>
-                <div className="p-6 sm:p-8">
-                <p className="flex items-start gap-2.5 rounded-2xl border border-[#e4dcff] bg-[#f7f3ff] px-4 py-3 text-sm text-[#3b2b8f]">
-                  <UserRound className="mt-0.5 size-4 shrink-0" />
-                  <span>{me ? <>Signed in as <span className="font-semibold">{me.full_name}</span>. Your profile details are filled in below.</> : <>Have a profile? <Link to={`/careers/login?next=/careers/jobs/${slug}%23apply`} className="font-semibold underline">Sign in</Link> to fill this form automatically, or continue as a guest.</>}</span>
+                <div className="p-4 sm:p-5">
+                <p className="rounded-xl border border-[#e4dcff] bg-[#f7f3ff] px-3 py-2 text-xs text-[#3b2b8f]">
+                  {me ? <>Signed in as <span className="font-semibold">{me.full_name}</span>. Your details are filled in.</> : <>Have a profile? <Link to={`/careers/login?next=/careers/jobs/${slug}%23apply`} className="font-semibold underline">Sign in</Link> to fill this automatically, or continue as a guest.</>}
                 </p>
-                <fieldset className="mt-8 grid gap-4 sm:grid-cols-2">
-                  <legend className="mb-4 flex items-center gap-2.5 text-base font-bold text-slate-900"><span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#3a35e0] to-[#5fa8ff] text-xs text-white">1</span>Personal information</legend>
+                <fieldset className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <legend className="mb-2 text-sm font-bold text-slate-900">1 · Personal</legend>
                   <FormField label="Full name" name="full_name" required defaultValue={me?.full_name} />
                   <FormField label="Email" name="email" type="email" required defaultValue={me?.email} />
                   <FormField label="Mobile number" name="phone" type="tel" required defaultValue={me?.phone} />
                   <FormField label="Current location" name="location" required defaultValue={me?.location} />
                 </fieldset>
-                <fieldset className="mt-10 grid gap-4 sm:grid-cols-2">
-                  <legend className="mb-4 flex items-center gap-2.5 text-base font-bold text-slate-900"><span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#d946ef] text-xs text-white">2</span>Professional information</legend>
+                <fieldset className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <legend className="mb-2 text-sm font-bold text-slate-900">2 · Professional</legend>
                   <FormField label="Total experience (years)" name="experience_years" type="number" min={0} required defaultValue={me?.experience_years} />
                   <FormField label="Notice period" name="notice_period" required hint="For example: Immediate, 30 days" defaultValue={me?.notice_period} />
                   <FormField label="Current company" name="current_company" defaultValue={me?.current_company} />
@@ -608,17 +610,17 @@ export function CareerJobPage() {
                   <FormField label="Highest qualification" name="qualification" required defaultValue={me?.qualification} />
                   <FormField label="Skills" name="skills" required hint="Separate skills with commas" defaultValue={me?.skills} />
                 </fieldset>
-                <fieldset className="mt-10 grid gap-4">
-                  <legend className="mb-4 flex items-center gap-2.5 text-base font-bold text-slate-900"><span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff3d9a] to-[#ff8a5c] text-xs text-white">3</span>Resume & consent</legend>
-                  <FormField label="Resume" name="resume" type="file" accept=".pdf,.doc,.docx" required hint="PDF, DOC, or DOCX, up to 5 MB" />
-                  <label className="block text-sm"><span className="font-medium text-slate-700">Message <span className="text-slate-400">(optional)</span></span><textarea name="message" rows={4} maxLength={2000} placeholder="Tell the team why you are a good fit (optional)" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/15" /></label>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 transition hover:border-[#c4b5fd]"><input type="checkbox" name="consent" value="1" required className="mt-0.5 size-4 accent-[#3a35e0]" /><span>I agree that {row.company} may process my details for this application under the <a href="/careers#privacy" className="font-semibold text-[#3a35e0]">privacy notice</a> (version 2026-11), and I confirm the information is accurate.</span></label>
+                <fieldset className="mt-5 grid gap-3">
+                  <legend className="mb-2 text-sm font-bold text-slate-900">3 · Resume</legend>
+                  <FormField label="Resume" name="resume" type="file" accept=".pdf,.doc,.docx" required hint="PDF, DOC or DOCX, up to 5 MB" />
+                  <label className="block text-sm sm:col-span-2"><span className="font-medium text-slate-700">Message <span className="font-normal text-slate-400">(optional)</span></span><textarea name="message" rows={2} maxLength={2000} placeholder="Why you are a good fit (optional)" className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/20" /></label>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700"><input type="checkbox" name="consent" value="1" required className="mt-0.5 size-3.5 accent-[#3a35e0]" /><span>I agree that {row.company} may use my details for this application under the <a href="/careers#privacy" className="font-semibold text-[#3a35e0]">privacy notice</a>, and the information is accurate.</span></label>
                 </fieldset>
                 {Object.keys(fieldErrors).length > 0 ? <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-red-700">{Object.keys(fieldErrors).map((name) => <li key={name}>{fieldError(name)}</li>)}</ul> : null}
                 {error && Object.keys(fieldErrors).length === 0 ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-                <div className="mt-8 flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="flex items-center gap-2 text-xs text-slate-500"><ShieldCheck className="size-4 text-emerald-600" />Your resume is stored privately and shared only with {row.company}.</p>
-                  <button type="submit" disabled={pending} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-sm font-semibold text-white shadow-lg shadow-[#6d38d6]/30 transition hover:-translate-y-0.5 hover:opacity-95 disabled:translate-y-0 disabled:opacity-60 sm:w-auto sm:px-8">{pending ? 'Sending application…' : <>Submit application <ArrowRight className="size-4" /></>}</button>
+                <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="flex items-center gap-1.5 text-[11px] text-slate-500"><ShieldCheck className="size-3.5 text-emerald-600" />Resume stays private and is shared only with {row.company}.</p>
+                  <button type="submit" disabled={pending} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-sm font-semibold text-white shadow-md shadow-[#6d38d6]/25 hover:opacity-95 disabled:opacity-60 sm:w-auto sm:px-6">{pending ? 'Sending…' : <>Submit application <ArrowRight className="size-4" /></>}</button>
                 </div>
                 </div>
               </form>
