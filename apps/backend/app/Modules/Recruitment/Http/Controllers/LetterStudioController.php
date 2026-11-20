@@ -80,6 +80,7 @@ class LetterStudioController extends Controller
             'ctc' => ['nullable', 'numeric', 'min:0'],
             'fixed' => ['nullable', 'numeric', 'min:0'],
             'variable' => ['nullable', 'numeric', 'min:0'],
+            'allow_pipeline' => ['nullable', 'boolean'],
         ], [
             'ctc.numeric' => 'CTC total must be a number, such as 200000 or 2 Lac.',
             'fixed.numeric' => 'CTC fixed must be a number, such as 200000 or 2 Lac.',
@@ -111,6 +112,7 @@ class LetterStudioController extends Controller
             'ctc' => isset($data['ctc']) ? (string) $data['ctc'] : null,
             'fixed' => isset($data['fixed']) ? (string) $data['fixed'] : null,
             'variable' => isset($data['variable']) ? (string) $data['variable'] : null,
+            'allow_pipeline' => ! empty($data['allow_pipeline']) ? '1' : null,
         ];
     }
 

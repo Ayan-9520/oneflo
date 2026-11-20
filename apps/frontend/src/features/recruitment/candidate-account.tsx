@@ -11,6 +11,7 @@ import {
   Circle,
   Clock,
   Download,
+  FileText,
   Gauge,
   GraduationCap,
   Hourglass,
@@ -55,6 +56,7 @@ export type CandidateProfile = {
   linked: { google: boolean; linkedin: boolean }
 }
 type MyOffer = { id: number; designation: string; compensation_note: string; status: 'sent' | 'accepted' | 'declined'; job_title: string | null; company: string | null; sent_on: string | null; answered_on: string | null }
+type MyLetter = { id: number; type: string; label: string; number: string; company: string | null; issued_on: string }
 type MyApplication = { id: number; job_title: string | null; job_slug: string | null; company: string | null; stage: string; applied_on: string | null }
 
 const tokenKey = 'oneflo.candidate_token'
@@ -190,6 +192,7 @@ const fieldClass = 'h-12 w-full rounded-xl border border-slate-200 bg-slate-50/7
 function MyOffers() {
   const queryClient = useQueryClient()
   const offers = useQuery({ queryKey: ['candidate-offers', candidateToken()], queryFn: () => candidateRequest<MyOffer[]>('/api/v1/candidate/me/offers') })
+  const letters = useQuery({ queryKey: ['candidate-letters', candidateToken()], queryFn: () => candidateRequest<MyLetter[]>('/api/v1/candidate/me/letters') })
   const [busy, setBusy] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -219,8 +222,21 @@ function MyOffers() {
     URL.revokeObjectURL(url)
   }
 
+  async function issued(item: MyLetter) {
+    setError(null)
+    const response = await apiFetch(`/api/v1/candidate/me/letters/${item.id}/pdf`, { headers: candidateHeaders() })
+    if (!response.ok) { setError('The letter could not be downloaded.'); return }
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${item.number}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const rows = offers.data ?? []
-  if (rows.length === 0) return null
+  const issuedRows = letters.data ?? []
+  if (rows.length === 0 && issuedRows.length === 0) return null
 
   return (
     <section className="mt-8 overflow-hidden rounded-3xl border border-[#ffd1e8] bg-gradient-to-br from-[#fff3f9] via-white to-[#eef4ff] p-6 shadow-[0_18px_50px_rgb(226_61_154_/_0.12)] sm:p-7">
@@ -253,6 +269,24 @@ function MyOffers() {
           </li>
         ))}
       </ul>
+      {issuedRows.length > 0 ? (
+        <div className="mt-6">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900"><FileText className="size-4 text-[#6d38d6]" />My letters</h3>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {issuedRows.map((item) => (
+              <li key={item.id}>
+                <button type="button" onClick={() => void issued(item)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white bg-white/90 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold text-slate-900">{item.label}</span>
+                    <span className="block truncate text-xs text-slate-500">{item.company} · {item.number}</span>
+                  </span>
+                  <Download className="size-4 shrink-0 text-[#6d38d6]" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -399,7 +399,7 @@ export function LetterStudioPage() {
     URL.revokeObjectURL(url)
   }
 
-  async function issue() {
+  async function issue(allowPipeline = false) {
     const payError = payErrors()
     if (payError) {
       setError(payError)
@@ -408,7 +408,7 @@ export function LetterStudioPage() {
     setPending(true)
     setError(null)
     try {
-      const result = await apiData<{ candidate_id: number | null; employee_id: number | null; number: string }>('/api/v1/letter-studio', { method: 'POST', body: JSON.stringify(payload()) })
+      const result = await apiData<{ candidate_id: number | null; employee_id: number | null; number: string }>('/api/v1/letter-studio', { method: 'POST', body: JSON.stringify({ ...payload(), allow_pipeline: allowPipeline }) })
       if (result.candidate_id) setCandidateId(result.candidate_id)
       setEmployeeId(result.employee_id)
       setIssued(result.number)
@@ -420,6 +420,12 @@ export function LetterStudioPage() {
         setLetter('joining_letter')
       } else if (letter === 'joining_letter') setLetter('confirmation_letter')
     } catch (caught) {
+      if (caught instanceof ApiError && caught.errors.pipeline && !allowPipeline) {
+        setPending(false)
+        if (window.confirm(`${caught.errors.pipeline[0]}\n\nIssue it here anyway? This can create a second candidate or employee record.`)) await issue(true)
+        else setError(caught.errors.pipeline[0])
+        return
+      }
       setError(caught instanceof ApiError ? caught.message : 'The letter could not be issued.')
     } finally {
       setPending(false)
@@ -493,21 +499,19 @@ export function LetterStudioPage() {
           </div>
         </form>
         <article className="rounded-sm border border-[#eadfd4] bg-white px-6 pb-10 pt-6 font-serif text-[#1c1433] shadow-[0_16px_40px_rgba(28,20,51,0.06)] sm:px-10">
-          <div className="relative">
-            {logoUrl ? <img src={logoUrl} alt="" className="h-36 w-auto max-w-[22rem] object-contain object-left" /> : <div className="inline-flex border border-[#1c1433] px-3 py-2 text-lg font-bold tracking-[0.2em] text-[#1c1433]">{mark(company)}</div>}
-            <h2 className="absolute inset-x-0 top-0 text-center font-sans text-2xl font-semibold tracking-tight text-black">{label}</h2>
+          <div className="flex items-center justify-between gap-6">
+            {logoUrl ? <img src={logoUrl} alt="" className="max-h-14 w-auto max-w-[12.5rem] object-contain object-left" /> : <div className="inline-flex border border-[#1c1433] px-3 py-2 text-lg font-bold tracking-[0.2em] text-[#1c1433]">{mark(company)}</div>}
+            <div className="text-right font-sans text-xs leading-5 text-[#4b4f63]">
+              <p className="text-sm font-bold text-[#3a35e0]">{company}</p>
+              {address ? <p>{address}</p> : null}
+              {[profile.data?.contact_phone, profile.data?.contact_email, profile.data?.website].some(Boolean) ? <p>{[profile.data?.contact_phone, profile.data?.contact_email, profile.data?.website].filter(Boolean).join('  |  ')}</p> : null}
+            </div>
           </div>
-          <div className="mt-6 grid gap-x-8 text-[15px] leading-7 sm:grid-cols-2">
-            <div>
-              <p className="font-semibold">{company}</p>
-              <p><span className="font-semibold">Address:</span> {address}</p>
-              <p><span className="font-semibold">Contact:</span> {profile.data?.contact_phone ?? ''}</p>
-            </div>
-            <div>
-              <p><span className="font-semibold">Website:</span> {profile.data?.website ?? ''}</p>
-              <p><span className="font-semibold">Email:</span> {profile.data?.contact_email ?? ''}</p>
-              <p><span className="font-semibold">Date:</span> {displayDate(form.letter_date)}</p>
-            </div>
+          <div className="mt-3 h-[3px] bg-[#3a35e0]" />
+          <div className="mt-0.5 h-px bg-[#6d38d6]" />
+          <div className="mt-5 flex items-end justify-between gap-4">
+            <h2 className="font-sans text-lg font-semibold uppercase tracking-wider text-[#1c1433]">{label}</h2>
+            <p className="font-sans text-xs">Date: {displayDate(form.letter_date)}</p>
           </div>
           {person ? <p className="mt-6 text-[15px] font-semibold leading-7">{person}</p> : null}
           {form.address ? <p className="text-[15px] leading-7">{form.address}</p> : null}

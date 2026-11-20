@@ -43,6 +43,7 @@ final class LetterStudio
         if (! array_key_exists($type, DocumentTypes::catalog())) {
             throw ValidationException::withMessages(['document_type' => ['The document type is not recognized.']]);
         }
+        $this->guardPipeline($type, $input);
         $employeeId = null;
         $candidate = null;
 
@@ -147,6 +148,7 @@ final class LetterStudio
             'website' => ($input['company_website'] ?? '') !== '' ? $input['company_website'] : ($profile?->website ?? ''),
             'email' => ($input['company_email'] ?? '') !== '' ? $input['company_email'] : ($profile?->contact_email ?? ''),
             'date' => $letterDate !== '' ? $letterDate : now()->format('d-m-Y'),
+            'reference' => $input['reference'] ?? null,
             'person' => $person,
             'personAddress' => $input['address'] ?? '',
             'personEmail' => $input['email'] ?? '',
@@ -307,9 +309,48 @@ final class LetterStudio
         ]);
     }
 
-    private function store(LegalEntity $entity, string $type, string $html, ?int $employeeId, ?Candidate $candidate, User $actor): IssuedDocument
+    /**
+     * Issues a numbered letter for an existing pipeline candidate. It never creates a candidate or an employee.
+     *
+     * @param  array<string, string|null>  $input
+     */
+    public function issueFor(string $type, LegalEntity $entity, array $input, Candidate $candidate, ?int $employeeId, User $actor): IssuedDocument
     {
-        $number = $this->nextNumber($type);
+        return DB::transaction(function () use ($type, $entity, $input, $candidate, $employeeId, $actor): IssuedDocument {
+            $number = $this->nextNumber($type);
+            $html = $this->html($entity, $type, [...$input, 'reference' => $number], $actor);
+
+            return $this->store($entity, $type, $html, $employeeId, $candidate, $actor, $number);
+        });
+    }
+
+    /**
+     * @param  array<string, string|null>  $input
+     */
+    private function guardPipeline(string $type, array $input): void
+    {
+        if (! in_array($type, [DocumentTypes::OFFER_LETTER, DocumentTypes::APPOINTMENT_LETTER, DocumentTypes::JOINING_LETTER], true) || ($input['allow_pipeline'] ?? null) === '1') {
+            return;
+        }
+        $email = trim((string) ($input['email'] ?? ''));
+        $phone = preg_replace('/\D/', '', (string) ($input['phone'] ?? '')) ?? '';
+        $candidates = Candidate::query()->where(function ($query) use ($input, $email, $phone): void {
+            $query->whereKey((int) ($input['candidate_id'] ?? 0));
+            if ($email !== '') {
+                $query->orWhere('email', $email);
+            }
+            if (strlen($phone) >= 10) {
+                $query->orWhere('phone', 'like', '%'.substr($phone, -10));
+            }
+        })->pluck('id');
+        if ($candidates->isNotEmpty() && \App\Models\JobApplication::query()->whereIn('candidate_id', $candidates)->exists()) {
+            throw ValidationException::withMessages(['pipeline' => ['This person is in the hiring pipeline. Issue the offer, appointment and joining letters from Recruitment so the employee is created only once.']]);
+        }
+    }
+
+    private function store(LegalEntity $entity, string $type, string $html, ?int $employeeId, ?Candidate $candidate, User $actor, ?string $number = null): IssuedDocument
+    {
+        $number ??= $this->nextNumber($type);
         $versionQuery = IssuedDocument::query()->where('document_type', $type);
         if ($candidate !== null) {
             $versionQuery->where('candidate_id', $candidate->id);

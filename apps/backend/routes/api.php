@@ -63,6 +63,8 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/me', [CandidateAccountController::class, 'update']);
             Route::get('/me/applications', [CandidateAccountController::class, 'applications']);
             Route::get('/me/offers', [CandidateAccountController::class, 'offers']);
+            Route::get('/me/letters', [CandidateAccountController::class, 'letters']);
+            Route::get('/me/letters/{document}/pdf', [CandidateAccountController::class, 'letterPdf'])->whereNumber('document');
             Route::get('/me/offers/{offer}/letter', [CandidateAccountController::class, 'offerLetter'])->whereNumber('offer');
             Route::post('/me/offers/{offer}/{decision}', [CandidateAccountController::class, 'respondOffer'])->whereNumber('offer')->whereIn('decision', ['accept', 'decline']);
             Route::post('/logout', [CandidateAccountController::class, 'logout']);
@@ -183,6 +185,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/recruitment/offers', [RecruitmentController::class, 'storeOffer']);
             Route::get('/recruitment/offers/{jobOffer}', [RecruitmentController::class, 'showOffer']);
             Route::get('/recruitment/offers/{jobOffer}/letter', [RecruitmentController::class, 'offerLetter']);
+            Route::post('/recruitment/offers/{jobOffer}/appointment-letter', [RecruitmentController::class, 'appointmentLetter']);
             Route::post('/recruitment/offers/{jobOffer}/submit', [RecruitmentController::class, 'submitOffer']);
             Route::post('/recruitment/offers/{jobOffer}/approve', [RecruitmentController::class, 'approveOffer']);
             Route::post('/recruitment/offers/{jobOffer}/reject', [RecruitmentController::class, 'rejectOffer']);

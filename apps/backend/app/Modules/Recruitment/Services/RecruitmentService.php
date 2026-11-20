@@ -201,9 +201,14 @@ final class RecruitmentService
         if ($offer->status !== 'approved') {
             throw ValidationException::withMessages(['status' => ['Only an approved offer can be issued.']]);
         }
-        $offer->status = 'sent';
-        $offer->sent_at = now();
-        $offer->save();
+        DB::transaction(function () use ($offer, $actor): void {
+            $offer->status = 'sent';
+            $offer->sent_at = now();
+            $offer->save();
+            if ($this->issuedLetter($offer, 'offer_letter') === null) {
+                $this->issueLetter($offer, 'offer_letter', $actor);
+            }
+        });
         $this->audit->accessChange($actor, $this->context->get(), 'offer.sent', ['offer_id' => $offer->id, 'email' => $this->emailOffer($offer)]);
 
         return $offer;
@@ -228,34 +233,86 @@ final class RecruitmentService
         });
     }
 
+    /**
+     * The issued offer letter once the offer is sent, otherwise an unnumbered draft preview.
+     */
     public function offerLetter(JobOffer $offer): string
+    {
+        $issued = $this->issuedLetter($offer, 'offer_letter');
+        if ($issued !== null) {
+            return app(\App\Modules\Recruitment\Services\OnboardingService::class)->pdf($issued);
+        }
+        $organization = \App\Models\Organization::query()->find($offer->organization_id);
+        $previous = $this->context->get();
+        $this->context->set($organization);
+        try {
+            return app(LetterStudio::class)->render($this->entityFor($offer), 'offer_letter', $this->letterInput($offer));
+        } finally {
+            $previous === null ? $this->context->forget() : $this->context->set($previous);
+        }
+    }
+
+    public function appointmentLetter(JobOffer $offer, User $actor, string $startsOn): \App\Models\IssuedDocument
+    {
+        if ($offer->status !== 'accepted') {
+            throw ValidationException::withMessages(['status' => ['Issue the appointment letter after the candidate accepts the offer.']]);
+        }
+
+        return $this->issueLetter($offer, 'appointment_letter', $actor, ['joining_date' => $startsOn]);
+    }
+
+    public function issuedLetter(JobOffer $offer, string $type): ?\App\Models\IssuedDocument
+    {
+        $candidateId = JobApplication::query()->withoutGlobalScopes()->whereKey($offer->job_application_id)->value('candidate_id');
+
+        return \App\Models\IssuedDocument::query()->withoutGlobalScopes()
+            ->where('organization_id', $offer->organization_id)->where('candidate_id', $candidateId)
+            ->where('document_type', $type)->whereNull('voided_at')->latest('id')->first();
+    }
+
+    /**
+     * @param  array<string, string|null>  $extra
+     */
+    private function issueLetter(JobOffer $offer, string $type, User $actor, array $extra = [], ?int $employeeId = null): \App\Models\IssuedDocument
+    {
+        $candidate = Candidate::query()->withoutGlobalScopes()->findOrFail(JobApplication::query()->withoutGlobalScopes()->whereKey($offer->job_application_id)->value('candidate_id'));
+
+        return app(LetterStudio::class)->issueFor($type, $this->entityFor($offer), [...$this->letterInput($offer), ...$extra], $candidate, $employeeId, $actor);
+    }
+
+    private function entityFor(JobOffer $offer): LegalEntity
+    {
+        $entity = LegalEntity::query()->withoutGlobalScopes()->find($offer->legal_entity_id);
+        if ($entity === null) {
+            throw ValidationException::withMessages(['legal_entity_id' => ['The legal employer for this offer was not found.']]);
+        }
+
+        return $entity;
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private function letterInput(JobOffer $offer): array
     {
         $application = JobApplication::query()->withoutGlobalScopes()->find($offer->job_application_id);
         $candidate = $application ? Candidate::query()->withoutGlobalScopes()->find($application->candidate_id) : null;
         $opening = $application ? JobOpening::query()->withoutGlobalScopes()->find($application->job_opening_id) : null;
-        $organization = \App\Models\Organization::query()->find($offer->organization_id);
-        $entity = LegalEntity::query()->withoutGlobalScopes()->find($offer->legal_entity_id);
-        if ($entity === null || $organization === null) {
-            throw ValidationException::withMessages(['legal_entity_id' => ['The legal employer for this offer was not found.']]);
-        }
+        $requisition = $opening ? JobRequisition::query()->withoutGlobalScopes()->find($opening->job_requisition_id) : null;
+        $department = $requisition?->department_id ? \App\Models\Department::query()->withoutGlobalScopes()->whereKey($requisition->department_id)->value('name') : null;
         $digits = preg_replace('/[^0-9]/', '', (string) preg_replace('/\.\d+/', '', $offer->compensation_note));
-        $previous = $this->context->get();
-        $this->context->set($organization);
-        try {
-            return app(LetterStudio::class)->render($entity, 'offer_letter', [
-                'given_name' => $candidate?->given_name ?? '',
-                'family_name' => $candidate?->family_name ?? '',
-                'email' => $candidate?->email ?? '',
-                'phone' => $candidate?->phone ?? '',
-                'address' => $candidate?->location ?? '',
-                'designation' => $offer->designation,
-                'department' => $opening?->category ?? '',
-                'ctc' => $digits !== '' && strlen($digits) <= 9 ? $digits : null,
-                'letter_date' => ($offer->sent_at ?? now())->toDateString(),
-            ]);
-        } finally {
-            $previous === null ? $this->context->forget() : $this->context->set($previous);
-        }
+
+        return [
+            'given_name' => $candidate?->given_name ?? '',
+            'family_name' => $candidate?->family_name ?? '',
+            'email' => $candidate?->email ?? '',
+            'phone' => $candidate?->phone ?? '',
+            'address' => $candidate?->location ?? '',
+            'designation' => $offer->designation,
+            'department' => $department ?? $opening?->category ?? '',
+            'ctc' => $digits !== '' && strlen($digits) <= 9 ? $digits : null,
+            'letter_date' => now()->toDateString(),
+        ];
     }
 
     private function emailOffer(JobOffer $offer): string
@@ -346,7 +403,7 @@ final class RecruitmentService
                 'phone' => $candidate->phone,
                 'legal_entity_id' => $entity->id,
                 'joined_on' => $joinedOn,
-                'designation_id' => null,
+                ...$this->roleFor($offer),
                 'note' => 'Converted from candidate '.$candidate->id,
             ], $actor);
             $candidate->status = 'hired';
@@ -374,6 +431,10 @@ final class RecruitmentService
                     'title' => $title,
                 ]);
             }
+            $this->issueLetter($offer, 'joining_letter', $actor, [
+                'joining_date' => $joinedOn,
+                'employee_code' => $employee->employee_code,
+            ], $employee->id);
             $this->audit->accessChange($actor, $this->context->get(), 'candidate.converted', [
                 'candidate_id' => $candidate->id,
                 'employee_id' => $employee->id,
@@ -381,6 +442,24 @@ final class RecruitmentService
 
             return $employee;
         });
+    }
+
+    /**
+     * @return array{designation_id: int|null, department_id: int|null}
+     */
+    private function roleFor(JobOffer $offer): array
+    {
+        $opening = JobOpening::query()->find($offer->application?->job_opening_id);
+        $requisition = $opening ? JobRequisition::query()->find($opening->job_requisition_id) : null;
+        $designation = \App\Models\Designation::query()->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($offer->designation))])->first();
+        if ($designation === null && $requisition?->designation_id !== null) {
+            $designation = \App\Models\Designation::query()->find($requisition->designation_id);
+        }
+
+        return [
+            'designation_id' => $designation?->id,
+            'department_id' => $designation?->department_id ?? $requisition?->department_id,
+        ];
     }
 
     public function openingFor(JobRequisition $requisition): JobOpening

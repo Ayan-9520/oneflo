@@ -191,8 +191,10 @@ class RecruitmentController extends Controller
         $feedback = \App\Models\InterviewFeedback::query()->whereIn('interview_id', $interviews->flatten()->pluck('id'))->get()->keyBy('interview_id');
         $offers = JobOffer::query()->whereIn('job_application_id', $ids)->orderByDesc('id')->get()->groupBy('job_application_id');
         $resumes = CandidateResume::query()->whereIn('candidate_id', $applications->pluck('candidate_id'))->orderByDesc('id')->get()->groupBy('candidate_id');
+        $letters = \App\Models\IssuedDocument::query()->whereIn('candidate_id', $applications->pluck('candidate_id'))
+            ->whereIn('document_type', ['offer_letter', 'appointment_letter', 'joining_letter'])->whereNull('voided_at')->orderBy('id')->get()->groupBy('candidate_id');
 
-        return ApiResponse::data($applications->map(function (JobApplication $application) use ($interviews, $feedback, $offers, $resumes): array {
+        return ApiResponse::data($applications->map(function (JobApplication $application) use ($interviews, $feedback, $offers, $resumes, $letters): array {
             $candidate = $application->candidate;
             $offer = $offers->get($application->id)?->first();
 
@@ -213,6 +215,12 @@ class RecruitmentController extends Controller
                 'stage' => $application->stage,
                 'applied_on' => $application->created_at?->toDateString(),
                 'resume_id' => $resumes->get($application->candidate_id)?->first()?->id,
+                'letters' => ($letters->get($application->candidate_id) ?? collect())->map(fn ($document) => [
+                    'id' => $document->id,
+                    'type' => $document->document_type,
+                    'number' => $document->number,
+                    'issued_on' => $document->issued_on instanceof \DateTimeInterface ? $document->issued_on->format('Y-m-d') : (string) $document->issued_on,
+                ])->values()->all(),
                 'interviews' => ($interviews->get($application->id) ?? collect())->map(fn (Interview $interview) => [
                     'id' => $interview->id,
                     'scheduled_at' => $interview->scheduled_at instanceof \DateTimeInterface ? $interview->scheduled_at->format('Y-m-d H:i') : (string) $interview->scheduled_at,
@@ -233,6 +241,16 @@ class RecruitmentController extends Controller
                 ] : null,
             ];
         })->all());
+    }
+
+    public function appointmentLetter(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->manage($request, $authorization);
+        $authorization->authorizePermission($request->user(), \App\Support\Permissions::DOCUMENTS_GENERATE);
+        $data = $request->validate(['starts_on' => ['required', 'date']]);
+        $document = $recruitment->appointmentLetter($jobOffer, $request->user(), $data['starts_on']);
+
+        return ApiResponse::data(['id' => $document->id, 'number' => $document->number], 201);
     }
 
     public function offerLetter(JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): \Symfony\Component\HttpFoundation\Response

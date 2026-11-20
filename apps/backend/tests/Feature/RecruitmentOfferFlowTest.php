@@ -68,9 +68,20 @@ class RecruitmentOfferFlowTest extends TestCase
         $this->postJson("/api/v1/candidate/me/offers/{$offer}/accept", [], $meera)->assertOk()->assertJsonPath('data.status', 'accepted');
         $this->postJson("/api/v1/candidate/me/offers/{$offer}/decline", [], $meera)->assertUnprocessable();
 
+        $this->postJson("/api/v1/recruitment/offers/{$offer}/appointment-letter", ['starts_on' => '2026-12-15'], $header)->assertCreated();
         $this->postJson("/api/v1/recruitment/offers/{$offer}/convert", ['joined_on' => '2026-12-15'], $header)->assertCreated();
         $row = collect($this->getJson('/api/v1/recruitment/applications', $header)->json('data'))->firstWhere('id', $application);
         $this->assertSame('hired', $row['stage']);
+        $this->assertSame(['offer_letter', 'appointment_letter', 'joining_letter'], array_column($row['letters'], 'type'));
+        $this->assertSame(1, \App\Models\Employee::query()->count());
+
+        $letters = $this->getJson('/api/v1/candidate/me/letters', $meera)->assertOk()->assertJsonCount(3, 'data')->json('data');
+        $this->assertStringStartsWith('%PDF', $this->get('/api/v1/candidate/me/letters/'.$letters[0]['id'].'/pdf', $meera)->assertOk()->getContent());
+        $this->get('/api/v1/candidate/me/letters/'.$letters[0]['id'].'/pdf', ['Authorization' => 'Bearer other-token'])->assertNotFound();
+
+        $studio = ['document_type' => 'offer_letter', 'legal_entity_id' => $entity->id, 'given_name' => 'Meera', 'family_name' => 'Iyer', 'email' => 'meera@example.com', 'designation' => 'Analyst', 'joining_date' => '2026-12-15'];
+        $this->postJson('/api/v1/letter-studio', $studio, $header)->assertUnprocessable()->assertJsonValidationErrors('pipeline');
+        $this->postJson('/api/v1/letter-studio', [...$studio, 'email' => 'someone.else@example.com'], $header)->assertCreated();
     }
 
     private function member(Organization $organization): User

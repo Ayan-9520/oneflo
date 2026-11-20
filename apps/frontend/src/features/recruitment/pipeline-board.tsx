@@ -26,6 +26,7 @@ export type PipelineApplication = {
   stage: string
   applied_on: string | null
   resume_id: number | null
+  letters: Array<{ id: number; type: string; number: string; issued_on: string }>
   interviews: PipelineInterview[]
   offer: PipelineOffer | null
 }
@@ -47,6 +48,12 @@ const offerLabels: Record<string, string> = {
   sent: 'Sent, waiting for candidate',
   accepted: 'Accepted by candidate',
   declined: 'Declined by candidate',
+}
+
+const letterLabels: Record<string, string> = {
+  offer_letter: 'Offer letter',
+  appointment_letter: 'Appointment letter',
+  joining_letter: 'Joining letter',
 }
 
 async function download(path: string, name: string) {
@@ -178,8 +185,20 @@ function ApplicationPanel({ application, entities, canManage, canApproveOffer, c
         {application.skills ? <p className="text-xs text-muted-foreground">Skills: {application.skills}</p> : null}
         <div className="flex flex-wrap gap-2">
           {application.resume_id ? <Button variant="outline" onClick={() => void download(`/api/v1/recruitment/resumes/${application.resume_id}`, `resume-${application.id}`).catch(() => setError('The resume could not be downloaded.'))}><FileText className="size-4" />Resume</Button> : null}
-          {offer && offer.status !== 'draft' ? <Button variant="outline" onClick={() => void download(`${offerPath}/letter`, `offer-letter-${offer.id}.pdf`).catch(() => setError('The letter could not be downloaded.'))}><Download className="size-4" />Offer letter</Button> : null}
+          {offer && application.letters.length === 0 && offer.status !== 'draft' ? <Button variant="outline" onClick={() => void download(`${offerPath}/letter`, `offer-letter-${offer.id}.pdf`).catch(() => setError('The letter could not be downloaded.'))}><Download className="size-4" />Offer letter</Button> : null}
         </div>
+        {application.letters.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Letters issued</p>
+            {application.letters.map((letter) => (
+              <button key={letter.id} type="button" onClick={() => void download(`/api/v1/issued-documents/${letter.id}/pdf`, `${letter.number}.pdf`).catch(() => setError('The letter could not be downloaded.'))}
+                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background/80 p-2 text-left text-xs hover:border-primary">
+                <span><span className="font-semibold">{letterLabels[letter.type] ?? letter.type}</span><br /><span className="text-muted-foreground">{letter.number} · {letter.issued_on}</span></span>
+                <Download className="size-4 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        ) : null}
         {application.interviews.length > 0 ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interviews</p>
@@ -285,11 +304,22 @@ function ApplicationPanel({ application, entities, canManage, canApproveOffer, c
                 <div className="flex gap-2"><Button variant="outline" disabled={pending} onClick={() => void run([[`${offerPath}/accept`, null]], 'Marked as accepted.')}>Mark accepted</Button><Button variant="outline" disabled={pending} onClick={() => void run([[`${offerPath}/decline`, null]], 'Marked as declined.')}>Mark declined</Button></div>
               </div>
             ) : null}
+            {offer.status === 'accepted' && !application.letters.some((letter) => letter.type === 'appointment_letter') ? (
+              <form className="flex flex-wrap items-end gap-2 border-b border-border pb-3" onSubmit={(event) => {
+                event.preventDefault()
+                void run([[`${offerPath}/appointment-letter`, { starts_on: String(new FormData(event.currentTarget).get('starts_on')) }]], 'Appointment letter issued. The candidate can download it from their profile.')
+              }}>
+                <p className="w-full text-sm">Step 1: issue the appointment letter with the agreed start date.</p>
+                <Field label="Start date" htmlFor="p-start"><Input id="p-start" name="starts_on" type="date" required /></Field>
+                <Button type="submit" variant="outline" disabled={pending}><FileText className="size-4" />Issue appointment letter</Button>
+              </form>
+            ) : null}
             {offer.status === 'accepted' ? (canConfirmJoining ? (
               <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => {
                 event.preventDefault()
-                void run([[`${offerPath}/convert`, { joined_on: String(new FormData(event.currentTarget).get('joined_on')) }]], 'Joining confirmed. The employee record and onboarding tasks were created.')
+                void run([[`${offerPath}/convert`, { joined_on: String(new FormData(event.currentTarget).get('joined_on')) }]], 'Joining confirmed. The employee, joining letter and onboarding tasks were created.')
               }}>
+                <p className="w-full text-sm">Step 2: on the joining day, confirm joining. This creates the employee and the joining letter.</p>
                 <Field label="Joining date" htmlFor="p-join"><Input id="p-join" name="joined_on" type="date" required /></Field>
                 <Button type="submit" disabled={pending}><UserCheck className="size-4" />Confirm joining</Button>
               </form>

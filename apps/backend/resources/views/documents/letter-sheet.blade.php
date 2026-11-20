@@ -6,11 +6,13 @@
     <style>
         body { margin: 0; color: #1c1433; font-family: DejaVu Serif, serif; font-size: 12px; }
         .sheet { padding: 28px 36px 32px; }
-        h1 { margin: 0; text-align: center; font-family: DejaVu Sans, sans-serif; font-size: 22px; color: #000000; }
-        .logo { height: 128px; width: auto; }
+        h1 { margin: 0; font-family: DejaVu Sans, sans-serif; font-size: 17px; letter-spacing: 1px; text-transform: uppercase; color: #1c1433; }
+        .logo { max-height: 56px; max-width: 200px; }
+        .letterhead { text-align: right; vertical-align: middle; font-family: DejaVu Sans, sans-serif; font-size: 10px; line-height: 1.6; color: #4b4f63; }
+        .letterhead .company { font-size: 13px; font-weight: 700; }
         .mark { display: inline-block; border: 1px solid #1c1433; color: #1c1433; font-size: 18px; font-weight: 700; letter-spacing: 2px; padding: 10px 14px; }
-        table.meta { width: 100%; border-collapse: collapse; margin: 18px 0; }
-        table.meta td { vertical-align: top; width: 50%; font-size: 12px; line-height: 1.7; padding: 0; }
+        table.meta { width: 100%; border-collapse: collapse; margin: 16px 0 12px; }
+        table.meta td { vertical-align: bottom; width: 50%; font-size: 12px; line-height: 1.6; padding: 0; }
         h2 { margin: 16px 0 6px; font-size: 14px; color: #1c1433; }
         p { margin: 0 0 8px; line-height: 1.7; }
         .subject { font-weight: 700; margin: 16px 0 8px; }
@@ -23,21 +25,27 @@
 <div class="sheet" data-letter-sheet="true">
     <table style="width: 100%; border-collapse: collapse;">
         <tr>
-            <td style="width: 34%; vertical-align: top;">
+            <td style="width: 45%; vertical-align: middle;">
                 @if (!empty($logo))
                     <img class="logo" src="{{ $logo }}" alt="">
                 @else
                     <div class="mark">{{ $mark }}</div>
                 @endif
             </td>
-            <td style="vertical-align: top; text-align: center;"><h1>{{ $title }}</h1></td>
-            <td style="width: 34%;"></td>
+            <td class="letterhead">
+                <div class="company" style="color: {{ $primary }};">{{ $company }}</div>
+                @if ($address !== '')<div>{{ $address }}</div>@endif
+                @php($contactLine = implode('  |  ', array_values(array_filter([$phone, $email, $website], fn ($value) => trim((string) $value) !== ''))))
+                @if ($contactLine !== '')<div>{{ $contactLine }}</div>@endif
+            </td>
         </tr>
     </table>
+    <div style="height: 3px; background: {{ $primary }}; margin-top: 12px;"></div>
+    <div style="height: 1px; background: {{ $secondary }}; margin-top: 2px;"></div>
     <table class="meta">
         <tr>
-            <td><strong>{{ $company }}</strong><br><strong>Address:</strong> {{ $address }}<br><strong>Contact:</strong> {{ $phone }}</td>
-            <td><strong>Website:</strong> {{ $website }}<br><strong>Email:</strong> {{ $email }}<br><strong>Date:</strong> {{ $date }}</td>
+            <td><h1>{{ $title }}</h1></td>
+            <td style="text-align: right; font-family: DejaVu Sans, sans-serif; font-size: 11px;">Date: {{ $date }}@if (!empty($reference))<br>Ref: {{ $reference }}@endif</td>
         </tr>
     </table>
     @if ($person !== '')<p><strong>{{ $person }}</strong>@if ($personAddress !== '')<br>{{ $personAddress }}@endif @if (!empty($role))<br>Designation: {{ $role }}@endif @if (($department ?? '') !== '')<br>Department: {{ $department }}@endif @if (($personEmail ?? '') !== '' || ($personPhone ?? '') !== '')<br>{{ trim(($personEmail ?? '').' '.($personPhone ?? '')) }}@endif</p>@endif

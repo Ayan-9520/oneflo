@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\CandidateAccount;
 use App\Models\JobApplication;
+use App\Models\IssuedDocument;
 use App\Models\JobOffer;
 use App\Models\JobOpening;
 use App\Models\Organization;
 use App\Modules\Recruitment\Services\CandidateAuthService;
+use App\Modules\Recruitment\Services\OnboardingService;
 use App\Modules\Recruitment\Services\RecruitmentService;
 use Symfony\Component\HttpFoundation\Response;
 use App\Support\ApiResponse;
@@ -182,6 +184,43 @@ class CandidateAccountController extends Controller
         $updated = $recruitment->respondAsCandidate($model, $decision === 'accept');
 
         return ApiResponse::data(['id' => $updated->id, 'status' => $updated->status]);
+    }
+
+    public function letters(Request $request): JsonResponse
+    {
+        $labels = ['offer_letter' => 'Offer letter', 'appointment_letter' => 'Appointment letter', 'joining_letter' => 'Joining letter'];
+        $rows = $this->letterQuery($request)->orderByDesc('id')->get()->map(fn (IssuedDocument $document) => [
+            'id' => $document->id,
+            'type' => $document->document_type,
+            'label' => $labels[$document->document_type] ?? $document->document_type,
+            'number' => $document->number,
+            'company' => Organization::query()->whereKey($document->organization_id)->value('name'),
+            'issued_on' => $document->issued_on instanceof \DateTimeInterface ? $document->issued_on->format('Y-m-d') : (string) $document->issued_on,
+        ])->all();
+
+        return ApiResponse::data($rows);
+    }
+
+    public function letterPdf(Request $request, int $document, OnboardingService $onboarding): Response
+    {
+        $model = $this->letterQuery($request)->findOrFail($document);
+
+        return response($onboarding->pdf($model), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$model->number.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<IssuedDocument>
+     */
+    private function letterQuery(Request $request)
+    {
+        $candidates = Candidate::query()->withoutGlobalScopes()->where('candidate_account_id', $this->account($request)->id)->pluck('id');
+
+        return IssuedDocument::query()->withoutGlobalScopes()->whereIn('candidate_id', $candidates)
+            ->whereIn('document_type', ['offer_letter', 'appointment_letter', 'joining_letter'])->whereNull('voided_at');
     }
 
     /**
