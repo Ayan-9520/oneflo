@@ -258,6 +258,57 @@ function HomeIntro() {
   )
 }
 
+function VisitorPopup() {
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  useEffect(() => {
+    if (window.sessionStorage.getItem('oneflo.visitor')) return
+    const timer = window.setTimeout(() => setOpen(true), 3200)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  function close() {
+    window.sessionStorage.setItem('oneflo.visitor', '1')
+    setOpen(false)
+  }
+
+  async function save(event: FormEvent) {
+    event.preventDefault()
+    const body = Object.fromEntries([...new FormData(event.currentTarget).entries()].map(([key, value]) => [key, String(value).trim()]))
+    setPending(true)
+    try {
+      await apiData('/api/v1/careers/visitors', { method: 'POST', body: JSON.stringify(body) })
+    } catch {
+      // The visitor can continue even if the details could not be saved.
+    }
+    close()
+  }
+
+  if (!open) return null
+
+  const field = 'h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus:border-[#6d38d6] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6d38d6]/20'
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#120b2e]/45 px-4 backdrop-blur-sm">
+      <form onSubmit={(event) => void save(event)} className="w-full max-w-md rounded-3xl bg-white p-6 shadow-[0_24px_60px_rgb(18_11_46_/_0.28)]">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#6d38d6]">Welcome to OneFlo</p>
+        <h2 className="mt-1 text-xl font-extrabold text-slate-950">Tell us a little about you</h2>
+        <p className="mt-1 text-sm text-slate-500">All fields are optional. Skip if you only want to browse jobs.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm sm:col-span-2"><span className="font-medium text-slate-700">Name</span><input name="name" className={`mt-1 ${field}`} /></label>
+          <label className="block text-sm"><span className="font-medium text-slate-700">Mobile</span><input name="phone" type="tel" className={`mt-1 ${field}`} /></label>
+          <label className="block text-sm"><span className="font-medium text-slate-700">Location</span><input name="location" className={`mt-1 ${field}`} /></label>
+          <label className="block text-sm sm:col-span-2"><span className="font-medium text-slate-700">Email</span><input name="email" type="email" className={`mt-1 ${field}`} /></label>
+        </div>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <button type="button" onClick={close} className="text-sm font-semibold text-slate-500 hover:text-slate-800">Skip</button>
+          <button type="submit" disabled={pending} className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-5 text-sm font-semibold text-white shadow-md disabled:opacity-60">{pending ? 'Saving…' : 'Continue'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 export function HomePage() {
   const navigate = useNavigate()
   useScrollToHash()
@@ -284,6 +335,7 @@ export function HomePage() {
   return (
     <div className="min-h-svh bg-white text-slate-900">
       <HomeIntro />
+      <VisitorPopup />
       <PublicHeader />
 
       <section className="relative overflow-hidden bg-[#f3d9ee] pb-32 [text-shadow:0_2px_12px_rgb(20_15_69_/_0.45)] pt-16 text-white sm:pt-24">

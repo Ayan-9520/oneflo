@@ -46,6 +46,7 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/integrations/biometric/punches', [AdvancedController::class, 'biometric'])->middleware('throttle:biometric');
     Route::get('/document-verifications/{token}', [DocumentEngineController::class, 'verify']);
     Route::get('/careers', [CareersController::class, 'index'])->middleware('throttle:careers');
+    Route::post('/careers/visitors', [CareersController::class, 'visitor'])->middleware('throttle:careers');
     Route::get('/careers/companies/{slug}', [CareersController::class, 'company'])->middleware('throttle:careers');
     Route::get('/careers/companies/{slug}/logo', [CareersController::class, 'logo']);
     Route::get('/careers/jobs/{slug}', [CareersController::class, 'show'])->middleware('throttle:careers');

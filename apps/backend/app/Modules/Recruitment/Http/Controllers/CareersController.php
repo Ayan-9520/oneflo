@@ -22,6 +22,22 @@ use Illuminate\Validation\Rule;
 
 class CareersController extends Controller
 {
+    public function visitor(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:120'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:160'],
+            'location' => ['nullable', 'string', 'max:120'],
+        ]);
+        $filled = array_filter($data, fn ($value) => is_string($value) && trim($value) !== '');
+        if ($filled !== []) {
+            \App\Models\SiteVisitor::query()->create(array_map(fn ($value) => trim($value), $filled));
+        }
+
+        return ApiResponse::data(['saved' => $filled !== []]);
+    }
+
     public function index(Request $request, CareersService $careers): JsonResponse
     {
         return ApiResponse::data([
