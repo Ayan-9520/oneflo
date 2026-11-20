@@ -90,9 +90,19 @@ final class LetterStudio
     }
 
     /**
+     * Renders a designed letter without storing it or touching sequences.
+     *
      * @param  array<string, string|null>  $input
      */
-    private function html(LegalEntity $entity, string $type, array $input, User $actor): string
+    public function render(LegalEntity $entity, string $type, array $input, ?User $actor = null): string
+    {
+        return $this->pdf->binary($this->html($entity, $type, $input, $actor));
+    }
+
+    /**
+     * @param  array<string, string|null>  $input
+     */
+    private function html(LegalEntity $entity, string $type, array $input, ?User $actor): string
     {
         $profile = CompanyProfile::query()->with(['signatories', 'offices'])->where('legal_entity_id', $entity->id)->first();
         $signatory = $profile?->signatories->firstWhere('is_primary', true) ?? $profile?->signatories->first();
@@ -149,7 +159,7 @@ final class LetterStudio
             'joining' => $sections['joining'],
             'requirements' => $sections['requirements'],
             'documents' => $sections['documents'],
-            'signatory' => $signatory?->name ?: $actor->name,
+            'signatory' => $signatory?->name ?: ($actor?->name ?? 'Human Resources'),
             'signatoryTitle' => $signatory?->designation ?? '',
             'signatoryContact' => trim((string) ($profile?->contact_email ?: $profile?->contact_phone)),
             'footer' => DocumentTypes::isOfficial($type) ? null : 'Powered by OneFlo',

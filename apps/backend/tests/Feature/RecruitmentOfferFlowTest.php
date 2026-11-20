@@ -58,11 +58,11 @@ class RecruitmentOfferFlowTest extends TestCase
         $this->actingAs($recruiter);
         $this->postJson("/api/v1/recruitment/offers/{$offer}/send", [], $header)->assertOk();
         $hrLetter = $this->get("/api/v1/recruitment/offers/{$offer}/letter", $header)->assertOk();
-        $this->assertStringContainsString('OFFER OF EMPLOYMENT', $hrLetter->getContent());
+        $this->assertStringStartsWith('%PDF', $hrLetter->getContent());
 
         $this->getJson('/api/v1/candidate/me/offers', $meera)->assertOk()->assertJsonPath('data.0.status', 'sent')->assertJsonPath('data.0.company', 'Northwind');
         $letter = $this->get("/api/v1/candidate/me/offers/{$offer}/letter", $meera)->assertOk();
-        $this->assertStringContainsString('Meera Iyer', $letter->getContent());
+        $this->assertStringStartsWith('%PDF', $letter->getContent());
         $this->get("/api/v1/candidate/me/offers/{$offer}/letter", ['Authorization' => 'Bearer other-token'])->assertNotFound();
         $this->postJson("/api/v1/candidate/me/offers/{$offer}/accept", [], ['Authorization' => 'Bearer other-token'])->assertNotFound();
         $this->postJson("/api/v1/candidate/me/offers/{$offer}/accept", [], $meera)->assertOk()->assertJsonPath('data.status', 'accepted');

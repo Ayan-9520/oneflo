@@ -235,42 +235,27 @@ final class RecruitmentService
         $opening = $application ? JobOpening::query()->withoutGlobalScopes()->find($application->job_opening_id) : null;
         $organization = \App\Models\Organization::query()->find($offer->organization_id);
         $entity = LegalEntity::query()->withoutGlobalScopes()->find($offer->legal_entity_id);
-        $employer = $entity?->legal_name ?? $organization?->name ?? 'the company';
-        $status = match ($offer->status) {
-            'accepted' => 'Accepted on '.$offer->accepted_at?->format('d M Y'),
-            'declined' => 'Declined on '.$offer->declined_at?->format('d M Y'),
-            'sent' => 'Awaiting your answer',
-            default => 'Draft - not yet issued',
-        };
-
-        return \App\Support\SimplePdf::text([
-            strtoupper((string) ($organization?->name ?? 'OneFlo')),
-            $employer,
-            '',
-            'Date: '.($offer->sent_at ?? now())->format('d M Y'),
-            'Reference: OFFER-'.str_pad((string) $offer->id, 5, '0', STR_PAD_LEFT),
-            '',
-            'Dear '.($candidate?->fullName() ?? 'Candidate').',',
-            '',
-            'OFFER OF EMPLOYMENT',
-            '',
-            "We are pleased to offer you the position of {$offer->designation} with {$employer}".($opening ? ", following your application for {$opening->title}" : '').'.',
-            '',
-            'Designation: '.$offer->designation,
-            'Compensation: '.$offer->compensation_note,
-            'Work location: '.($opening?->location ? ucwords($opening->location) : 'As communicated by HR'),
-            '',
-            'Your joining date, documents and onboarding steps will be shared by the HR team once you accept this offer.',
-            'This offer is subject to verification of the details and documents you provide.',
-            '',
-            'Please accept or decline this offer from your OneFlo careers profile.',
-            '',
-            'Status: '.$status,
-            '',
-            'Regards,',
-            'Human Resources',
-            $employer,
-        ]);
+        if ($entity === null || $organization === null) {
+            throw ValidationException::withMessages(['legal_entity_id' => ['The legal employer for this offer was not found.']]);
+        }
+        $digits = preg_replace('/[^0-9]/', '', (string) preg_replace('/\.\d+/', '', $offer->compensation_note));
+        $previous = $this->context->get();
+        $this->context->set($organization);
+        try {
+            return app(LetterStudio::class)->render($entity, 'offer_letter', [
+                'given_name' => $candidate?->given_name ?? '',
+                'family_name' => $candidate?->family_name ?? '',
+                'email' => $candidate?->email ?? '',
+                'phone' => $candidate?->phone ?? '',
+                'address' => $candidate?->location ?? '',
+                'designation' => $offer->designation,
+                'department' => $opening?->category ?? '',
+                'ctc' => $digits !== '' && strlen($digits) <= 9 ? $digits : null,
+                'letter_date' => ($offer->sent_at ?? now())->toDateString(),
+            ]);
+        } finally {
+            $previous === null ? $this->context->forget() : $this->context->set($previous);
+        }
     }
 
     private function emailOffer(JobOffer $offer): string
