@@ -351,7 +351,7 @@ export function HomePage() {
               <span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-[#ff8cc6] opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-[#ff2d87]" /></span>
               Hiring now across our businesses
             </p>
-            <h1 className="mt-6 text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-6xl">Real Jobs, Real People, <span className="bg-gradient-to-r from-[#ff3d9a] via-[#d946ef] to-[#6d5cff] bg-clip-text text-transparent [text-shadow:none] [filter:drop-shadow(0_2px_8px_rgb(255_255_255_/_0.6))]">Real Success</span></h1>
+            <h1 className="mt-6 text-4xl font-extrabold leading-[1.08] tracking-tight text-white [text-shadow:0_2px_16px_rgb(20_15_69_/_0.7)] sm:text-6xl"><span className="bg-gradient-to-r from-[#2a1b8f] via-[#c026d3] to-[#ff2d87] bg-clip-text text-transparent [text-shadow:none] [filter:drop-shadow(0_1px_0_rgb(255_255_255_/_0.85))]">Real Jobs, Real People,</span> Real Success</h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-white/80">Explore exciting career opportunities across our growing businesses. Discover the right role, showcase your skills and take the next step in your career.</p>
             <dl className="mt-10 flex flex-wrap gap-4">
               {stats.map((stat) => (
