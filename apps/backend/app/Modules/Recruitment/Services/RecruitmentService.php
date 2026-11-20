@@ -279,8 +279,9 @@ final class RecruitmentService
         $document = $this->issueLetter($offer, 'appointment_letter', $actor, ['joining_date' => $startsOn]);
         $candidate = Candidate::query()->find(JobApplication::query()->whereKey($offer->job_application_id)->value('candidate_id'));
         $company = $this->context->get()?->name ?? 'OneFlo';
+        $link = $this->letterLink($document);
         $this->mailTo($candidate?->email, "Appointment letter: {$offer->designation} at {$company}",
-            "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\nYour appointment letter for {$offer->designation} at {$company} is attached. Your start date is ".date('d M Y', strtotime($startsOn)).".\n\nRegards,\nHR, {$company}",
+            "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\nYour appointment letter for {$offer->designation} at {$company} is attached. Your start date is ".date('d M Y', strtotime($startsOn)).".\n\nOpen it any time, no account needed:\n{$link}\n\nRegards,\nHR, {$company}",
             app(OnboardingService::class)->pdf($document), $document->number.'.pdf');
 
         return $document;
@@ -385,6 +386,13 @@ final class RecruitmentService
         if ($subject !== null) {
             $this->mailTo($candidate?->email, $subject, $body);
         }
+    }
+
+    private function letterLink(\App\Models\IssuedDocument $document): string
+    {
+        $token = $document->plainVerificationToken ?? app(\App\Modules\Documents\Services\DocumentEngine::class)->token($document);
+
+        return rtrim((string) config('app.frontend_url'), '/').'/api/v1/careers/letters/'.$token;
     }
 
     private function mailTo(?string $email, string $subject, string $body, ?string $pdf = null, string $pdfName = 'letter.pdf'): string
@@ -503,7 +511,7 @@ final class RecruitmentService
             ], $employee->id);
             $company = $this->context->get()?->name ?? 'OneFlo';
             $this->mailTo($candidate->email, "Joining letter: {$offer->designation} at {$company}",
-                "Dear {$candidate->fullName()},\n\nWelcome to {$company}. Your joining letter is attached. Your employee code is {$employee->employee_code} and your joining date is ".date('d M Y', strtotime($joinedOn)).".\n\nRegards,\nHR, {$company}",
+                "Dear {$candidate->fullName()},\n\nWelcome to {$company}. Your joining letter is attached. Your employee code is {$employee->employee_code} and your joining date is ".date('d M Y', strtotime($joinedOn)).".\n\nOpen it any time, no account needed:\n".$this->letterLink($joining)."\n\nRegards,\nHR, {$company}",
                 app(OnboardingService::class)->pdf($joining), $joining->number.'.pdf');
             $this->audit->accessChange($actor, $this->context->get(), 'candidate.converted', [
                 'candidate_id' => $candidate->id,

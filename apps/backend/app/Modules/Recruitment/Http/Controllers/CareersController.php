@@ -212,6 +212,23 @@ class CareersController extends Controller
         return ApiResponse::data(['status' => $updated->status]);
     }
 
+    public function letterByToken(string $token): \Symfony\Component\HttpFoundation\Response
+    {
+        $document = \App\Models\IssuedDocument::query()->withoutGlobalScopes()
+            ->where('verification_hash', hash('sha256', $token))
+            ->whereIn('document_type', ['offer_letter', 'appointment_letter', 'joining_letter'])
+            ->whereNull('voided_at')->first();
+        if ($document === null) {
+            abort(404, 'This letter link is not valid.');
+        }
+
+        return response(app(\App\Modules\Recruitment\Services\OnboardingService::class)->pdf($document), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$document->number.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     public function savePolicy(Request $request, AuthorizationService $authorization, CareersService $careers): JsonResponse
     {
         $authorization->authorizePermission($request->user(), 'recruitment.rewards.manage');

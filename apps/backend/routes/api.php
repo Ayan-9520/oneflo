@@ -52,6 +52,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/careers/offer-response/{token}', [CareersController::class, 'offerByToken'])->middleware('throttle:careers');
     Route::get('/careers/offer-response/{token}/letter', [CareersController::class, 'offerLetterByToken'])->middleware('throttle:careers');
     Route::post('/careers/offer-response/{token}/{decision}', [CareersController::class, 'respondByToken'])->whereIn('decision', ['accept', 'decline'])->middleware('throttle:careers');
+    Route::get('/careers/letters/{token}', [CareersController::class, 'letterByToken'])->middleware('throttle:careers');
     Route::post('/careers/jobs/{slug}/apply', [CareersController::class, 'apply'])->middleware('throttle:careers');
     Route::prefix('/candidate')->group(function (): void {
         Route::get('/auth/methods', [CandidateAccountController::class, 'methods']);
