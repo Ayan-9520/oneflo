@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\CandidateAccount;
 use App\Models\JobApplication;
+use App\Models\JobOffer;
 use App\Models\JobOpening;
 use App\Models\Organization;
 use App\Modules\Recruitment\Services\CandidateAuthService;
+use App\Modules\Recruitment\Services\RecruitmentService;
+use Symfony\Component\HttpFoundation\Response;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -137,6 +140,59 @@ class CandidateAccountController extends Controller
             })->all();
 
         return ApiResponse::data($rows);
+    }
+
+    public function offers(Request $request): JsonResponse
+    {
+        $rows = $this->offerQuery($request)->whereIn('status', ['sent', 'accepted', 'declined'])->orderByDesc('id')->get()
+            ->map(function (JobOffer $offer): array {
+                $application = JobApplication::query()->withoutGlobalScopes()->find($offer->job_application_id);
+                $opening = $application ? JobOpening::query()->withoutGlobalScopes()->find($application->job_opening_id) : null;
+
+                return [
+                    'id' => $offer->id,
+                    'designation' => $offer->designation,
+                    'compensation_note' => $offer->compensation_note,
+                    'status' => $offer->status,
+                    'job_title' => $opening?->title,
+                    'company' => Organization::query()->whereKey($offer->organization_id)->value('name'),
+                    'sent_on' => $offer->sent_at?->toDateString(),
+                    'answered_on' => ($offer->accepted_at ?? $offer->declined_at)?->toDateString(),
+                ];
+            })->all();
+
+        return ApiResponse::data($rows);
+    }
+
+    public function offerLetter(Request $request, int $offer, RecruitmentService $recruitment): Response
+    {
+        $model = $this->offerQuery($request)->whereIn('status', ['sent', 'accepted', 'declined'])->findOrFail($offer);
+
+        return response($recruitment->offerLetter($model), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="offer-letter-'.$model->id.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    public function respondOffer(Request $request, int $offer, string $decision, RecruitmentService $recruitment): JsonResponse
+    {
+        abort_unless(in_array($decision, ['accept', 'decline'], true), 404);
+        $model = $this->offerQuery($request)->findOrFail($offer);
+        $updated = $recruitment->respondAsCandidate($model, $decision === 'accept');
+
+        return ApiResponse::data(['id' => $updated->id, 'status' => $updated->status]);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<JobOffer>
+     */
+    private function offerQuery(Request $request)
+    {
+        $candidates = Candidate::query()->withoutGlobalScopes()->where('candidate_account_id', $this->account($request)->id)->pluck('id');
+        $applications = JobApplication::query()->withoutGlobalScopes()->whereIn('candidate_id', $candidates)->pluck('id');
+
+        return JobOffer::query()->withoutGlobalScopes()->whereIn('job_application_id', $applications);
     }
 
     public function logout(Request $request, CandidateAuthService $auth): JsonResponse

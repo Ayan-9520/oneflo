@@ -204,9 +204,98 @@ final class RecruitmentService
         $offer->status = 'sent';
         $offer->sent_at = now();
         $offer->save();
-        $this->audit->accessChange($actor, $this->context->get(), 'offer.sent', ['offer_id' => $offer->id]);
+        $this->audit->accessChange($actor, $this->context->get(), 'offer.sent', ['offer_id' => $offer->id, 'email' => $this->emailOffer($offer)]);
 
         return $offer;
+    }
+
+    /**
+     * Records the candidate's own answer to a sent offer. No employee is created here.
+     */
+    public function respondAsCandidate(JobOffer $offer, bool $accept): JobOffer
+    {
+        return DB::transaction(function () use ($offer, $accept): JobOffer {
+            $locked = JobOffer::query()->withoutGlobalScopes()->whereKey($offer->id)->lockForUpdate()->first();
+            if ($locked === null || $locked->status !== 'sent') {
+                throw ValidationException::withMessages(['status' => ['This offer is no longer waiting for your answer.']]);
+            }
+            $locked->status = $accept ? 'accepted' : 'declined';
+            $locked->setAttribute($accept ? 'accepted_at' : 'declined_at', now());
+            $locked->decision_note = ($accept ? 'Accepted' : 'Declined').' by the candidate from the careers profile.';
+            $locked->save();
+
+            return $locked;
+        });
+    }
+
+    public function offerLetter(JobOffer $offer): string
+    {
+        $application = JobApplication::query()->withoutGlobalScopes()->find($offer->job_application_id);
+        $candidate = $application ? Candidate::query()->withoutGlobalScopes()->find($application->candidate_id) : null;
+        $opening = $application ? JobOpening::query()->withoutGlobalScopes()->find($application->job_opening_id) : null;
+        $organization = \App\Models\Organization::query()->find($offer->organization_id);
+        $entity = LegalEntity::query()->withoutGlobalScopes()->find($offer->legal_entity_id);
+        $employer = $entity?->legal_name ?? $organization?->name ?? 'the company';
+        $status = match ($offer->status) {
+            'accepted' => 'Accepted on '.$offer->accepted_at?->format('d M Y'),
+            'declined' => 'Declined on '.$offer->declined_at?->format('d M Y'),
+            'sent' => 'Awaiting your answer',
+            default => 'Draft - not yet issued',
+        };
+
+        return \App\Support\SimplePdf::text([
+            strtoupper((string) ($organization?->name ?? 'OneFlo')),
+            $employer,
+            '',
+            'Date: '.($offer->sent_at ?? now())->format('d M Y'),
+            'Reference: OFFER-'.str_pad((string) $offer->id, 5, '0', STR_PAD_LEFT),
+            '',
+            'Dear '.($candidate?->fullName() ?? 'Candidate').',',
+            '',
+            'OFFER OF EMPLOYMENT',
+            '',
+            "We are pleased to offer you the position of {$offer->designation} with {$employer}".($opening ? ", following your application for {$opening->title}" : '').'.',
+            '',
+            'Designation: '.$offer->designation,
+            'Compensation: '.$offer->compensation_note,
+            'Work location: '.($opening?->location ? ucwords($opening->location) : 'As communicated by HR'),
+            '',
+            'Your joining date, documents and onboarding steps will be shared by the HR team once you accept this offer.',
+            'This offer is subject to verification of the details and documents you provide.',
+            '',
+            'Please accept or decline this offer from your OneFlo careers profile.',
+            '',
+            'Status: '.$status,
+            '',
+            'Regards,',
+            'Human Resources',
+            $employer,
+        ]);
+    }
+
+    private function emailOffer(JobOffer $offer): string
+    {
+        $application = $offer->application;
+        $candidate = $application?->candidate;
+        if ($candidate?->email === null || ! in_array(config('mail.default'), ['smtp', 'ses', 'postmark', 'resend'], true)) {
+            return 'not_sent';
+        }
+        $company = $this->context->get()?->name ?? 'OneFlo';
+        $profile = rtrim((string) config('app.frontend_url'), '/').'/careers/profile';
+        try {
+            \Illuminate\Support\Facades\Mail::raw(
+                "Dear {$candidate->fullName()},\n\n{$company} is pleased to offer you the position of {$offer->designation}.\nCompensation: {$offer->compensation_note}\n\nThe offer letter is attached. Please sign in to your careers profile to accept or decline:\n{$profile}\n\nRegards,\nHR, {$company}",
+                function ($message) use ($candidate, $offer, $company): void {
+                    $message->to($candidate->email)
+                        ->subject("Offer letter: {$offer->designation} at {$company}")
+                        ->attachData($this->offerLetter($offer), 'offer-letter.pdf', ['mime' => 'application/pdf']);
+                },
+            );
+
+            return 'sent';
+        } catch (\Throwable) {
+            return 'failed';
+        }
     }
 
     public function acceptOffer(JobOffer $offer, User $actor): JobOffer

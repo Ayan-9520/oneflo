@@ -185,13 +185,65 @@ class RecruitmentController extends Controller
     {
         $this->view($authorization);
 
-        return ApiResponse::data(JobApplication::query()->with('candidate')->orderByDesc('id')->get()->map(fn (JobApplication $application) => [
-            'id' => $application->id,
-            'job_opening_id' => $application->job_opening_id,
-            'candidate_id' => $application->candidate_id,
-            'candidate_name' => $application->candidate?->fullName(),
-            'stage' => $application->stage,
-        ])->all());
+        $applications = JobApplication::query()->with(['candidate', 'opening'])->orderByDesc('id')->get();
+        $ids = $applications->pluck('id');
+        $interviews = Interview::query()->whereIn('job_application_id', $ids)->orderByDesc('scheduled_at')->get()->groupBy('job_application_id');
+        $feedback = \App\Models\InterviewFeedback::query()->whereIn('interview_id', $interviews->flatten()->pluck('id'))->get()->keyBy('interview_id');
+        $offers = JobOffer::query()->whereIn('job_application_id', $ids)->orderByDesc('id')->get()->groupBy('job_application_id');
+        $resumes = CandidateResume::query()->whereIn('candidate_id', $applications->pluck('candidate_id'))->orderByDesc('id')->get()->groupBy('candidate_id');
+
+        return ApiResponse::data($applications->map(function (JobApplication $application) use ($interviews, $feedback, $offers, $resumes): array {
+            $candidate = $application->candidate;
+            $offer = $offers->get($application->id)?->first();
+
+            return [
+                'id' => $application->id,
+                'job_opening_id' => $application->job_opening_id,
+                'job_title' => $application->opening?->title,
+                'candidate_id' => $application->candidate_id,
+                'candidate_name' => $candidate?->fullName(),
+                'email' => $candidate?->email,
+                'phone' => $candidate?->phone,
+                'location' => $candidate?->location,
+                'experience_years' => $candidate?->experience_years,
+                'skills' => $candidate?->skills,
+                'is_test_data' => (bool) $candidate?->is_test_data,
+                'source' => $application->source ?? $candidate?->source,
+                'expected_salary' => $application->expected_salary,
+                'stage' => $application->stage,
+                'applied_on' => $application->created_at?->toDateString(),
+                'resume_id' => $resumes->get($application->candidate_id)?->first()?->id,
+                'interviews' => ($interviews->get($application->id) ?? collect())->map(fn (Interview $interview) => [
+                    'id' => $interview->id,
+                    'scheduled_at' => $interview->scheduled_at instanceof \DateTimeInterface ? $interview->scheduled_at->format('Y-m-d H:i') : (string) $interview->scheduled_at,
+                    'interviewer' => $interview->interviewer,
+                    'mode' => $interview->mode,
+                    'status' => $interview->status,
+                    'rating' => $feedback->get($interview->id)?->rating,
+                    'recommendation' => $feedback->get($interview->id)?->recommendation,
+                    'comments' => $feedback->get($interview->id)?->comments,
+                ])->values()->all(),
+                'offer' => $offer ? [
+                    'id' => $offer->id,
+                    'designation' => $offer->designation,
+                    'compensation_note' => $offer->compensation_note,
+                    'status' => $offer->status,
+                    'submitted_by' => $offer->submitted_by,
+                    'decision_note' => $offer->decision_note,
+                ] : null,
+            ];
+        })->all());
+    }
+
+    public function offerLetter(JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): \Symfony\Component\HttpFoundation\Response
+    {
+        $this->view($authorization);
+
+        return response($recruitment->offerLetter($jobOffer), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="offer-letter-'.$jobOffer->id.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     public function storeApplication(Request $request, AuthorizationService $authorization): JsonResponse

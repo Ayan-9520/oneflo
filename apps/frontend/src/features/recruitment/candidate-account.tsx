@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
+  Award,
   BadgeCheck,
   BadgeIndianRupee,
   Briefcase,
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Download,
   Gauge,
   GraduationCap,
   Hourglass,
@@ -52,6 +54,7 @@ export type CandidateProfile = {
   phone_verified: boolean
   linked: { google: boolean; linkedin: boolean }
 }
+type MyOffer = { id: number; designation: string; compensation_note: string; status: 'sent' | 'accepted' | 'declined'; job_title: string | null; company: string | null; sent_on: string | null; answered_on: string | null }
 type MyApplication = { id: number; job_title: string | null; job_slug: string | null; company: string | null; stage: string; applied_on: string | null }
 
 const tokenKey = 'oneflo.candidate_token'
@@ -184,6 +187,76 @@ const stageOrder = ['applied', 'screening', 'interview', 'offer', 'hired']
 
 const fieldClass = 'h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-11 pr-4 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/15'
 
+function MyOffers() {
+  const queryClient = useQueryClient()
+  const offers = useQuery({ queryKey: ['candidate-offers', candidateToken()], queryFn: () => candidateRequest<MyOffer[]>('/api/v1/candidate/me/offers') })
+  const [busy, setBusy] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function respond(offer: MyOffer, decision: 'accept' | 'decline') {
+    if (decision === 'decline' && !window.confirm(`Decline the ${offer.designation} offer from ${offer.company}? This cannot be undone.`)) return
+    setBusy(offer.id)
+    setError(null)
+    try {
+      await candidateRequest(`/api/v1/candidate/me/offers/${offer.id}/${decision}`, { method: 'POST' })
+      await queryClient.invalidateQueries({ queryKey: ['candidate-offers'] })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Your answer could not be saved.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function letter(offer: MyOffer) {
+    setError(null)
+    const response = await apiFetch(`/api/v1/candidate/me/offers/${offer.id}/letter`, { headers: candidateHeaders() })
+    if (!response.ok) { setError('The offer letter could not be downloaded.'); return }
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `offer-letter-${offer.id}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const rows = offers.data ?? []
+  if (rows.length === 0) return null
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-3xl border border-[#ffd1e8] bg-gradient-to-br from-[#fff3f9] via-white to-[#eef4ff] p-6 shadow-[0_18px_50px_rgb(226_61_154_/_0.12)] sm:p-7">
+      <div className="flex items-center gap-3">
+        <span className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff3d9a] to-[#6d38d6] text-white shadow-md"><Award className="size-5" /></span>
+        <div><h2 className="text-lg font-bold text-slate-900">My offers</h2><p className="text-sm text-slate-500">Read your offer letter, then accept or decline it here.</p></div>
+      </div>
+      {error ? <p role="alert" className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+      <ul className="mt-5 grid gap-4 md:grid-cols-2">
+        {rows.map((offer) => (
+          <li key={offer.id} className="rounded-2xl border border-white bg-white/90 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold text-slate-900">{offer.designation}</p>
+                <p className="mt-0.5 text-sm text-slate-500">{offer.company}{offer.sent_on ? ` · Offered ${new Date(offer.sent_on).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${offer.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : offer.status === 'declined' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{offer.status === 'sent' ? 'Awaiting your answer' : offer.status === 'accepted' ? 'Accepted' : 'Declined'}</span>
+            </div>
+            <p className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"><BadgeIndianRupee className="size-4 text-[#6d38d6]" />{offer.compensation_note}</p>
+            {offer.status === 'accepted' ? <p className="mt-3 text-xs text-emerald-700">Congratulations! HR will contact you with your joining date and onboarding steps.</p> : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => void letter(offer)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-[#c9b8ff] hover:text-[#3a35e0]"><Download className="size-4" />Offer letter</button>
+              {offer.status === 'sent' ? (
+                <>
+                  <button type="button" disabled={busy === offer.id} onClick={() => void respond(offer, 'accept')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#10b981] to-[#06b6d4] px-4 text-sm font-semibold text-white shadow-md hover:opacity-95 disabled:opacity-60"><CheckCircle2 className="size-4" />Accept offer</button>
+                  <button type="button" disabled={busy === offer.id} onClick={() => void respond(offer, 'decline')} className="inline-flex h-10 items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60">Decline</button>
+                </>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 export function CandidateProfilePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -284,6 +357,8 @@ export function CandidateProfilePage() {
                 ))}
               </div>
             </div>
+
+            <MyOffers />
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
               <form onSubmit={(event) => void save(event)} className="space-y-6">

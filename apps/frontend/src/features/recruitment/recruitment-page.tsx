@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { CandidateImportPanel } from '@/features/recruitment/candidate-import'
+import { PipelineBoard, type PipelineApplication } from '@/features/recruitment/pipeline-board'
 import { ApiError, apiData, apiFetch } from '@/lib/api'
 
 type Entity = { id: number; legal_name: string }
@@ -22,7 +23,7 @@ type Opening = { id: number; title: string; status: string; slug: string | null;
 
 const careerCategories = ['Sales & Telecalling', 'Management', 'Insurance', 'Loans & Finance', 'Automotive', 'Digital Marketing', 'Marketing', 'Operations', 'Customer Support', 'Travel & Tourism', 'Technology & IT', 'Human Resources', 'Business Development', 'Other']
 type Candidate = { id: number; full_name: string; email: string | null; phone?: string | null; source?: string | null; status: string; is_test_data?: boolean }
-type Application = { id: number; candidate_name: string | null; stage: string; job_opening_id: number }
+type Application = PipelineApplication
 
 export function RecruitmentPage() {
   const { organizationId, organization, permissions } = useSession()
@@ -70,15 +71,9 @@ export function RecruitmentPage() {
           ]} />
         )}
       </section>
-      {applications.data && applications.data.length > 0 ? (
-        <section className="border-t border-border pt-6">
-          <h2 className="mb-3 text-lg font-semibold">Applications</h2>
-          <DataTable caption="Applications" rows={applications.data} getRowId={(row) => String(row.id)} columns={[
-            { id: 'candidate', header: 'Candidate', cell: (row) => row.candidate_name ?? '' },
-            { id: 'stage', header: 'Stage', cell: (row) => row.stage },
-          ]} />
-        </section>
-      ) : null}
+      {applications.isPending ? <Skeleton className="h-40 w-full" /> : (
+        <PipelineBoard applications={applications.data ?? []} entities={entities.data ?? []} canManage={canManage} canApproveOffer={canApproveOffer} canConfirmJoining={permissions.has('recruitment.joining.confirm')} />
+      )}
       <section className="border-t border-border pt-6">
         <h2 className="mb-3 text-lg font-semibold">Offers</h2>
         {offers.isPending ? <Skeleton className="h-16 w-full" /> : offers.isError ? <p className="text-sm text-muted-foreground">Offers could not be loaded.</p> : (offers.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No offer yet.</p> : (
