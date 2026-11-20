@@ -130,53 +130,48 @@ function JobCardView({ job }: { job: JobCard }) {
   ]
   const skills = (job.skills ?? '').split(/[,\n]/).map((skill) => skill.trim()).filter(Boolean)
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_10px_30px_rgb(15_23_42_/_0.05)] transition duration-300 hover:-translate-y-1 hover:border-[#d9c8ff] hover:shadow-[0_24px_50px_rgb(109_56_214_/_0.14)]">
-      <div className="h-1.5 bg-gradient-to-r from-[#ff3d9a] via-[#a855f7] to-[#3a35e0]" />
-      <div className="pointer-events-none absolute -right-16 -top-16 size-44 rounded-full bg-gradient-to-br from-[#ffd1e8] to-[#d6e4ff] opacity-50 blur-2xl transition group-hover:opacity-80" />
-      <div className="relative flex flex-1 flex-col p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex h-14 w-28 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white px-2 shadow-[0_6px_18px_rgb(15_23_42_/_0.08)]">
-            {job.company_logo ? <img src={job.company_logo} alt={`${job.company} logo`} className="max-h-10 w-full object-contain" /> : <span className="text-lg font-extrabold text-[#3a35e0]">{job.company.slice(0, 2).toUpperCase()}</span>}
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition duration-300 hover:-translate-y-0.5 hover:border-[#d9c8ff] hover:shadow-[0_16px_36px_rgb(109_56_214_/_0.12)]">
+      <div className="h-1 bg-gradient-to-r from-[#ff3d9a] via-[#a855f7] to-[#3a35e0]" />
+      <div className="relative flex flex-1 flex-col p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-20 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white px-1.5 shadow-sm">
+            {job.company_logo ? <img src={job.company_logo} alt="" className="max-h-8 w-full object-contain" /> : <span className="text-sm font-extrabold text-[#3a35e0]">{job.company.slice(0, 2).toUpperCase()}</span>}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Link to={`/careers/${job.company_slug}`} className="text-sm font-semibold text-slate-500 hover:text-[#3a35e0]">{job.company}</Link>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Actively hiring</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Link to={`/careers/${job.company_slug}`} className="text-xs font-semibold text-slate-500 hover:text-[#3a35e0]">{job.company}</Link>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Hiring</span>
             </div>
-            <h3 className="mt-1 text-xl font-bold leading-snug text-slate-900"><Link to={`/careers/jobs/${job.slug}`} className="hover:text-[#3a35e0]">{job.title}</Link></h3>
-            {job.designation || job.category ? <p className="mt-1 text-sm text-slate-500">{[job.designation, job.category].filter(Boolean).join(' · ')}</p> : null}
+            <h3 className="mt-0.5 text-base font-bold leading-snug text-slate-900"><Link to={`/careers/jobs/${job.slug}`} className="hover:text-[#3a35e0]">{job.title}</Link></h3>
+            {job.designation || job.category ? <p className="text-xs text-slate-500">{[job.designation, job.category].filter(Boolean).join(' · ')}</p> : null}
           </div>
         </div>
 
-        <dl className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+        <dl className="mt-3 flex flex-wrap gap-1.5">
           {facts.filter(([, , value]) => value).map(([Icon, label, value]) => (
-            <div key={label} className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3 py-2.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#6d38d6] shadow-sm"><Icon className="size-4" /></span>
-              <div className="min-w-0">
-                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
-                <dd className="truncate text-sm font-semibold text-slate-800" title={value ?? undefined}>{value}</dd>
-              </div>
+            <div key={label} title={label} className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700">
+              <Icon className="size-3.5 shrink-0 text-[#6d38d6]" />
+              <dd>{value}</dd>
             </div>
           ))}
         </dl>
 
-        {job.summary ? <p className="mt-4 line-clamp-2 text-sm leading-6 text-slate-600">{job.summary}</p> : null}
+        {job.summary ? <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-600">{job.summary}</p> : null}
         {skills.length ? (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {skills.slice(0, 5).map((skill) => <span key={skill} className="rounded-full border border-[#e4dcff] bg-[#f7f3ff] px-2.5 py-1 text-xs font-medium text-[#5b2fc9]">{skill}</span>)}
-            {skills.length > 5 ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">+{skills.length - 5} more</span> : null}
+          <div className="mt-2.5 flex flex-wrap gap-1">
+            {skills.slice(0, 4).map((skill) => <span key={skill} className="rounded-full border border-[#e4dcff] bg-[#f7f3ff] px-2 py-0.5 text-[11px] font-medium text-[#5b2fc9]">{skill}</span>)}
+            {skills.length > 4 ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">+{skills.length - 4}</span> : null}
           </div>
         ) : null}
 
-        <div className="min-h-5 flex-1" />
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-          <div className="text-xs text-slate-500">
-            <p className="flex items-center gap-1.5"><CalendarDays className="size-3.5" />Posted {formatDate(job.posted_on) ?? 'recently'}</p>
-            {job.deadline_on ? <p className="mt-1 flex items-center gap-1.5 font-semibold text-[#d61f7a]"><Clock className="size-3.5" />Apply by {formatDate(job.deadline_on)}</p> : null}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+          <div className="text-[11px] text-slate-500">
+            <p className="flex items-center gap-1"><CalendarDays className="size-3" />{formatDate(job.posted_on) ?? 'Recently'}</p>
+            {job.deadline_on ? <p className="mt-0.5 flex items-center gap-1 font-semibold text-[#d61f7a]"><Clock className="size-3" />By {formatDate(job.deadline_on)}</p> : null}
           </div>
-          <div className="flex items-center gap-2">
-            <Link to={`/careers/jobs/${job.slug}`} className="inline-flex h-10 items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-[#3a35e0] hover:text-[#3a35e0]">Details</Link>
-            <Link to={`/careers/jobs/${job.slug}#apply`} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-4 text-sm font-semibold text-white shadow-lg shadow-[#6d38d6]/25 hover:opacity-95">Apply now <ArrowRight className="size-4 transition group-hover:translate-x-0.5" /></Link>
+          <div className="flex items-center gap-1.5">
+            <Link to={`/careers/jobs/${job.slug}`} className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-[#3a35e0] hover:text-[#3a35e0]">Details</Link>
+            <Link to={`/careers/jobs/${job.slug}#apply`} className="inline-flex h-8 items-center gap-1 rounded-lg bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-3 text-xs font-semibold text-white shadow-md shadow-[#6d38d6]/20 hover:opacity-95">Apply <ArrowRight className="size-3.5" /></Link>
           </div>
         </div>
       </div>
