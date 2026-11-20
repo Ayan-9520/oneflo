@@ -226,6 +226,7 @@ class RecruitmentController extends Controller
                     'scheduled_at' => $interview->scheduled_at instanceof \DateTimeInterface ? $interview->scheduled_at->format('Y-m-d H:i') : (string) $interview->scheduled_at,
                     'interviewer' => $interview->interviewer,
                     'mode' => $interview->mode,
+                    'round' => $interview->round,
                     'status' => $interview->status,
                     'rating' => $feedback->get($interview->id)?->rating,
                     'recommendation' => $feedback->get($interview->id)?->recommendation,
@@ -283,8 +284,8 @@ class RecruitmentController extends Controller
     {
         $this->manage($request, $authorization);
         $data = $request->validate(['stage' => ['required', Rule::in(['applied', 'screening', 'interview', 'offer', 'rejected'])]]);
-        $jobApplication->stage = $data['stage'];
-        $jobApplication->save();
+        $recruitment = app(RecruitmentService::class);
+        $jobApplication = $recruitment->advance($jobApplication, $data['stage']);
 
         return ApiResponse::data(['id' => $jobApplication->id, 'stage' => $jobApplication->stage]);
     }
@@ -296,8 +297,9 @@ class RecruitmentController extends Controller
             'scheduled_at' => ['required', 'date'],
             'interviewer' => ['required', 'string', 'max:120'],
             'mode' => ['required', Rule::in(['in_person', 'phone', 'video'])],
+            'round' => ['nullable', Rule::in(['screening_call', 'mock', 'interview', 'final'])],
         ]);
-        $interview = $recruitment->schedule($jobApplication, $data['scheduled_at'], $data['interviewer'], $data['mode']);
+        $interview = $recruitment->schedule($jobApplication, $data['scheduled_at'], $data['interviewer'], $data['mode'], $data['round'] ?? 'interview');
 
         return ApiResponse::data(['id' => $interview->id], 201);
     }

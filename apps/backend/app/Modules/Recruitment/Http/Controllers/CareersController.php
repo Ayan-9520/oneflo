@@ -9,8 +9,11 @@ use App\Models\Employee;
 use App\Models\EmployeeReferral;
 use App\Models\JobOpening;
 use App\Models\ReferralReward;
+use App\Models\JobApplication;
+use App\Models\Organization;
 use App\Modules\Recruitment\Services\CandidateAuthService;
 use App\Modules\Recruitment\Services\CareersService;
+use App\Modules\Recruitment\Services\RecruitmentService;
 use App\Services\AuthorizationService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -174,6 +177,39 @@ class CareersController extends Controller
             'status' => $referral->status,
             'created_at' => $referral->created_at?->toDateString(),
         ])->all());
+    }
+
+    public function offerByToken(string $token, RecruitmentService $recruitment): JsonResponse
+    {
+        $offer = $recruitment->offerForToken($token);
+        $application = JobApplication::query()->withoutGlobalScopes()->find($offer->job_application_id);
+
+        return ApiResponse::data([
+            'designation' => $offer->designation,
+            'compensation_note' => $offer->compensation_note,
+            'status' => $offer->status,
+            'company' => Organization::query()->whereKey($offer->organization_id)->value('name'),
+            'candidate' => $application ? \App\Models\Candidate::query()->withoutGlobalScopes()->find($application->candidate_id)?->fullName() : null,
+        ]);
+    }
+
+    public function offerLetterByToken(string $token, RecruitmentService $recruitment): \Symfony\Component\HttpFoundation\Response
+    {
+        $offer = $recruitment->offerForToken($token);
+
+        return response($recruitment->offerLetter($offer), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="offer-letter.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    public function respondByToken(string $token, string $decision, RecruitmentService $recruitment): JsonResponse
+    {
+        abort_unless(in_array($decision, ['accept', 'decline'], true), 404);
+        $updated = $recruitment->respondAsCandidate($recruitment->offerForToken($token), $decision === 'accept');
+
+        return ApiResponse::data(['status' => $updated->status]);
     }
 
     public function savePolicy(Request $request, AuthorizationService $authorization, CareersService $careers): JsonResponse

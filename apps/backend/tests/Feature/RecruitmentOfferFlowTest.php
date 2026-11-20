@@ -60,6 +60,9 @@ class RecruitmentOfferFlowTest extends TestCase
         $hrLetter = $this->get("/api/v1/recruitment/offers/{$offer}/letter", $header)->assertOk();
         $this->assertStringStartsWith('%PDF', $hrLetter->getContent());
 
+        \App\Models\JobOffer::query()->withoutGlobalScopes()->whereKey($offer)->update(['response_token' => hash('sha256', 'public-token')]);
+        $this->getJson('/api/v1/careers/offer-response/public-token')->assertOk()->assertJsonPath('data.company', 'Northwind')->assertJsonPath('data.candidate', 'Meera Iyer');
+        $this->getJson('/api/v1/careers/offer-response/no-such-token')->assertNotFound();
         $this->getJson('/api/v1/candidate/me/offers', $meera)->assertOk()->assertJsonPath('data.0.status', 'sent')->assertJsonPath('data.0.company', 'Northwind');
         $letter = $this->get("/api/v1/candidate/me/offers/{$offer}/letter", $meera)->assertOk();
         $this->assertStringStartsWith('%PDF', $letter->getContent());

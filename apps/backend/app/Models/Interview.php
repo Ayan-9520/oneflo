@@ -11,7 +11,7 @@ class Interview extends Model
 {
     use BelongsToOrganization;
 
-    protected $fillable = ['job_application_id', 'scheduled_at', 'interviewer', 'mode', 'status'];
+    protected $fillable = ['job_application_id', 'scheduled_at', 'interviewer', 'mode', 'round', 'status'];
 
     protected function casts(): array
     {

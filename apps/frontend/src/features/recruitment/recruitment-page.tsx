@@ -304,12 +304,14 @@ function RecruitmentForms({ entities, requisitions, openings, candidates, applic
           scheduled_at: String(body.get('scheduled_at') ?? ''),
           interviewer: String(body.get('interviewer') ?? ''),
           mode: String(body.get('mode') ?? 'video'),
+          round: String(body.get('round') ?? 'interview'),
         }, 'Interview scheduled.')
       }}>
         <h2 className="text-lg font-semibold sm:col-span-2">Interview</h2>
         <Field label="Application" htmlFor="int-app"><Select id="int-app" name="application_id" options={applications.map((row) => ({ value: String(row.id), label: row.candidate_name ?? String(row.id) }))} /></Field>
         <Field label="When" htmlFor="int-when"><Input id="int-when" name="scheduled_at" type="datetime-local" required /></Field>
         <Field label="Interviewer" htmlFor="int-name"><Input id="int-name" name="interviewer" required /></Field>
+        <Field label="Round" htmlFor="int-round"><Select id="int-round" name="round" defaultValue="interview" options={[{ value: 'screening_call', label: 'Screening call' }, { value: 'mock', label: 'Assessment / mock' }, { value: 'interview', label: 'Interview' }, { value: 'final', label: 'Final interview' }]} /></Field>
         <Field label="Mode" htmlFor="int-mode"><Select id="int-mode" name="mode" defaultValue="video" options={[{ value: 'video', label: 'Video' }, { value: 'phone', label: 'Phone' }, { value: 'in_person', label: 'In person' }]} /></Field>
         <div className="w-fit sm:col-span-2"><Button type="submit" disabled={form.pending}>Schedule</Button></div>
       </form>

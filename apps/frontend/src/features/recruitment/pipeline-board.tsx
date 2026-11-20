@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { ApiError, apiData, apiFetch } from '@/lib/api'
 
-export type PipelineInterview = { id: number; scheduled_at: string; interviewer: string; mode: string; status: string; rating: number | null; recommendation: string | null; comments: string | null }
+export type PipelineInterview = { id: number; scheduled_at: string; interviewer: string; mode: string; round: string; status: string; rating: number | null; recommendation: string | null; comments: string | null }
 export type PipelineOffer = { id: number; designation: string; compensation_note: string; status: string; decision_note: string | null }
 export type PipelineApplication = {
   id: number
@@ -39,6 +39,9 @@ const stages = [
   { id: 'hired', label: 'Hired', tone: 'from-[#e3f8ee] to-[#f3fcf7] text-[#11804f]', dot: 'bg-[#16a34a]' },
   { id: 'rejected', label: 'Rejected', tone: 'from-[#f2f3f5] to-[#fafafa] text-[#5b6170]', dot: 'bg-[#9aa0ab]' },
 ] as const
+
+const roundLabels: Record<string, string> = { screening_call: 'Screening call', mock: 'Assessment / mock', interview: 'Interview', final: 'Final interview' }
+const roundOptions = Object.entries(roundLabels).map(([value, label]) => ({ value, label }))
 
 const offerLabels: Record<string, string> = {
   draft: 'Draft offer',
@@ -204,7 +207,7 @@ function ApplicationPanel({ application, entities, canManage, canApproveOffer, c
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interviews</p>
             {application.interviews.map((row) => (
               <div key={row.id} className="rounded-xl border border-border bg-background/80 p-2 text-xs">
-                <p className="font-semibold">{row.scheduled_at} · {row.mode.replace('_', ' ')} · {row.interviewer}</p>
+                <p className="font-semibold">{roundLabels[row.round] ?? 'Interview'} · {row.scheduled_at} · {row.mode.replace('_', ' ')} · {row.interviewer}</p>
                 <p className="text-muted-foreground">{row.status === 'completed' ? `Rating ${row.rating}/5 · ${row.recommendation} · ${row.comments}` : 'Scheduled'}</p>
               </div>
             ))}
@@ -229,13 +232,14 @@ function ApplicationPanel({ application, entities, canManage, canApproveOffer, c
             event.preventDefault()
             const body = new FormData(event.currentTarget)
             void run([
-              [`/api/v1/recruitment/applications/${application.id}/interviews`, { scheduled_at: String(body.get('scheduled_at')), interviewer: String(body.get('interviewer')), mode: String(body.get('mode')) }],
+              [`/api/v1/recruitment/applications/${application.id}/interviews`, { scheduled_at: String(body.get('scheduled_at')), interviewer: String(body.get('interviewer')), mode: String(body.get('mode')), round: String(body.get('round') ?? 'interview') }],
               ...(application.stage === 'interview' ? [] : [[stagePath, { stage: 'interview' }]] as Array<[string, Record<string, unknown>]>),
             ], 'Interview scheduled.')
           }}>
             <p className="text-sm sm:col-span-2">{application.stage === 'screening' ? 'Screening done? Schedule the interview.' : 'Schedule another round, or make an offer below.'}</p>
             <Field label="When" htmlFor="p-when"><Input id="p-when" name="scheduled_at" type="datetime-local" required /></Field>
             <Field label="Interviewer" htmlFor="p-who"><Input id="p-who" name="interviewer" required /></Field>
+            <Field label="Round" htmlFor="p-round"><Select id="p-round" name="round" defaultValue="interview" options={roundOptions} /></Field>
             <Field label="Mode" htmlFor="p-mode"><Select id="p-mode" name="mode" defaultValue="video" options={[{ value: 'video', label: 'Video' }, { value: 'phone', label: 'Phone' }, { value: 'in_person', label: 'In person' }]} /></Field>
             <div className="flex items-end gap-2"><Button type="submit" disabled={pending}><CalendarClock className="size-4" />Schedule</Button>{application.stage === 'screening' ? <Button type="button" variant="outline" disabled={pending} onClick={reject}>Reject</Button> : null}</div>
           </form>

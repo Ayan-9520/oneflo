@@ -20,6 +20,7 @@ use App\Models\OnboardingTask;
 use App\Models\RequisitionApproval;
 use App\Models\User;
 use App\Modules\Organization\Services\EmployeeCodeGenerator;
+use App\Modules\Recruitment\Services\OnboardingService;
 use App\Modules\Organization\Services\EmployeeLifecycle;
 use App\Services\AuditLogger;
 use App\Services\OrganizationContext;
@@ -107,18 +108,33 @@ final class RecruitmentService
         return $requisition;
     }
 
-    public function schedule(JobApplication $application, string $scheduledAt, string $interviewer, string $mode): Interview
+    public function schedule(JobApplication $application, string $scheduledAt, string $interviewer, string $mode, string $round = 'interview'): Interview
     {
         $application->stage = 'interview';
         $application->save();
-
-        return Interview::query()->create([
+        $interview = Interview::query()->create([
             'job_application_id' => $application->id,
             'scheduled_at' => $scheduledAt,
             'interviewer' => $interviewer,
             'mode' => $mode,
+            'round' => $round,
             'status' => 'scheduled',
         ]);
+        $this->interviewMail($application, $interview);
+
+        return $interview;
+    }
+
+    public function advance(JobApplication $application, string $stage): JobApplication
+    {
+        $previous = $application->stage;
+        $application->stage = $stage;
+        $application->save();
+        if ($stage !== $previous) {
+            $this->stageMail($application, $stage);
+        }
+
+        return $application;
     }
 
     public function feedback(Interview $interview, int $rating, string $comments, string $recommendation): InterviewFeedback
@@ -201,15 +217,17 @@ final class RecruitmentService
         if ($offer->status !== 'approved') {
             throw ValidationException::withMessages(['status' => ['Only an approved offer can be issued.']]);
         }
-        DB::transaction(function () use ($offer, $actor): void {
+        $token = \Illuminate\Support\Str::random(40);
+        DB::transaction(function () use ($offer, $actor, $token): void {
             $offer->status = 'sent';
             $offer->sent_at = now();
+            $offer->response_token = hash('sha256', $token);
             $offer->save();
             if ($this->issuedLetter($offer, 'offer_letter') === null) {
                 $this->issueLetter($offer, 'offer_letter', $actor);
             }
         });
-        $this->audit->accessChange($actor, $this->context->get(), 'offer.sent', ['offer_id' => $offer->id, 'email' => $this->emailOffer($offer)]);
+        $this->audit->accessChange($actor, $this->context->get(), 'offer.sent', ['offer_id' => $offer->id, 'email' => $this->emailOffer($offer, $token)]);
 
         return $offer;
     }
@@ -258,7 +276,14 @@ final class RecruitmentService
             throw ValidationException::withMessages(['status' => ['Issue the appointment letter after the candidate accepts the offer.']]);
         }
 
-        return $this->issueLetter($offer, 'appointment_letter', $actor, ['joining_date' => $startsOn]);
+        $document = $this->issueLetter($offer, 'appointment_letter', $actor, ['joining_date' => $startsOn]);
+        $candidate = Candidate::query()->find(JobApplication::query()->whereKey($offer->job_application_id)->value('candidate_id'));
+        $company = $this->context->get()?->name ?? 'OneFlo';
+        $this->mailTo($candidate?->email, "Appointment letter: {$offer->designation} at {$company}",
+            "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\nYour appointment letter for {$offer->designation} at {$company} is attached. Your start date is ".date('d M Y', strtotime($startsOn)).".\n\nRegards,\nHR, {$company}",
+            app(OnboardingService::class)->pdf($document), $document->number.'.pdf');
+
+        return $document;
     }
 
     public function issuedLetter(JobOffer $offer, string $type): ?\App\Models\IssuedDocument
@@ -315,24 +340,65 @@ final class RecruitmentService
         ];
     }
 
-    private function emailOffer(JobOffer $offer): string
+    private function emailOffer(JobOffer $offer, string $token): string
     {
-        $application = $offer->application;
-        $candidate = $application?->candidate;
-        if ($candidate?->email === null || ! in_array(config('mail.default'), ['smtp', 'ses', 'postmark', 'resend'], true)) {
+        $candidate = $offer->application?->candidate;
+        $company = $this->context->get()?->name ?? 'OneFlo';
+        $link = rtrim((string) config('app.frontend_url'), '/').'/careers/offer/'.$token;
+
+        return $this->mailTo($candidate?->email, "Offer letter: {$offer->designation} at {$company}",
+            "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\n{$company} is pleased to offer you the position of {$offer->designation}.\nCompensation: {$offer->compensation_note}\n\nYour offer letter is attached. No account is needed: open this link to read it and accept or decline:\n{$link}\n\nRegards,\nHR, {$company}",
+            $this->offerLetter($offer), 'offer-letter.pdf');
+    }
+
+    public function offerForToken(string $token): JobOffer
+    {
+        $offer = JobOffer::query()->withoutGlobalScopes()->where('response_token', hash('sha256', $token))->first();
+        if ($offer === null || ! in_array($offer->status, ['sent', 'accepted', 'declined'], true)) {
+            abort(404, 'This offer link is not valid.');
+        }
+
+        return $offer;
+    }
+
+    private function interviewMail(JobApplication $application, Interview $interview): void
+    {
+        $candidate = $application->candidate;
+        $company = $this->context->get()?->name ?? 'OneFlo';
+        $round = ['screening_call' => 'screening call', 'mock' => 'assessment / mock round', 'interview' => 'interview', 'final' => 'final interview'][$interview->round] ?? 'interview';
+        $when = $interview->scheduled_at instanceof \DateTimeInterface ? $interview->scheduled_at->format('d M Y, h:i A') : (string) $interview->scheduled_at;
+        $this->mailTo($candidate?->email, ucfirst($round).' scheduled at '.$company,
+            "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\nYour {$round} at {$company} is scheduled.\nDate and time: {$when}\nMode: ".str_replace('_', ' ', $interview->mode)."\nWith: {$interview->interviewer}\n\nPlease be available at the scheduled time. Reply to this email if you need a different slot.\n\nRegards,\nHR, {$company}");
+    }
+
+    private function stageMail(JobApplication $application, string $stage): void
+    {
+        $candidate = $application->candidate;
+        $company = $this->context->get()?->name ?? 'OneFlo';
+        $opening = JobOpening::query()->find($application->job_opening_id);
+        $role = $opening?->title ?? 'the role you applied for';
+        [$subject, $body] = match ($stage) {
+            'screening' => ["You are shortlisted at {$company}", "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\nGood news. Your application for {$role} at {$company} has been shortlisted. Our team will contact you with the next step, which may be a screening call or an assessment.\n\nRegards,\nHR, {$company}"],
+            'rejected' => ["Update on your application at {$company}", "Dear ".($candidate?->fullName() ?? 'Candidate').",\n\nThank you for applying for {$role} at {$company} and for the time you gave us. We will not be taking your application forward this time. We wish you the best.\n\nRegards,\nHR, {$company}"],
+            default => [null, null],
+        };
+        if ($subject !== null) {
+            $this->mailTo($candidate?->email, $subject, $body);
+        }
+    }
+
+    private function mailTo(?string $email, string $subject, string $body, ?string $pdf = null, string $pdfName = 'letter.pdf'): string
+    {
+        if ($email === null || $email === '' || ! in_array(config('mail.default'), ['smtp', 'ses', 'postmark', 'resend'], true)) {
             return 'not_sent';
         }
-        $company = $this->context->get()?->name ?? 'OneFlo';
-        $profile = rtrim((string) config('app.frontend_url'), '/').'/careers/profile';
         try {
-            \Illuminate\Support\Facades\Mail::raw(
-                "Dear {$candidate->fullName()},\n\n{$company} is pleased to offer you the position of {$offer->designation}.\nCompensation: {$offer->compensation_note}\n\nThe offer letter is attached. Please sign in to your careers profile to accept or decline:\n{$profile}\n\nRegards,\nHR, {$company}",
-                function ($message) use ($candidate, $offer, $company): void {
-                    $message->to($candidate->email)
-                        ->subject("Offer letter: {$offer->designation} at {$company}")
-                        ->attachData($this->offerLetter($offer), 'offer-letter.pdf', ['mime' => 'application/pdf']);
-                },
-            );
+            \Illuminate\Support\Facades\Mail::raw($body, function ($message) use ($email, $subject, $pdf, $pdfName): void {
+                $message->to($email)->subject($subject);
+                if ($pdf !== null) {
+                    $message->attachData($pdf, $pdfName, ['mime' => 'application/pdf']);
+                }
+            });
 
             return 'sent';
         } catch (\Throwable) {
@@ -431,10 +497,14 @@ final class RecruitmentService
                     'title' => $title,
                 ]);
             }
-            $this->issueLetter($offer, 'joining_letter', $actor, [
+            $joining = $this->issueLetter($offer, 'joining_letter', $actor, [
                 'joining_date' => $joinedOn,
                 'employee_code' => $employee->employee_code,
             ], $employee->id);
+            $company = $this->context->get()?->name ?? 'OneFlo';
+            $this->mailTo($candidate->email, "Joining letter: {$offer->designation} at {$company}",
+                "Dear {$candidate->fullName()},\n\nWelcome to {$company}. Your joining letter is attached. Your employee code is {$employee->employee_code} and your joining date is ".date('d M Y', strtotime($joinedOn)).".\n\nRegards,\nHR, {$company}",
+                app(OnboardingService::class)->pdf($joining), $joining->number.'.pdf');
             $this->audit->accessChange($actor, $this->context->get(), 'candidate.converted', [
                 'candidate_id' => $candidate->id,
                 'employee_id' => $employee->id,

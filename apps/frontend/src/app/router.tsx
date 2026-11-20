@@ -21,6 +21,7 @@ import { OnboardingPage } from '@/features/recruitment/onboarding-page'
 import { CandidateOAuthCallback, CandidateProfilePage } from '@/features/recruitment/candidate-account'
 import { CandidateLoginPage } from '@/features/recruitment/candidate-auth-page'
 import { CareerJobPage, CareersPage } from '@/features/recruitment/careers-page'
+import { OfferResponsePage } from '@/features/recruitment/offer-response-page'
 import { RecruitmentPage } from '@/features/recruitment/recruitment-page'
 import { LetterStudioPage } from '@/features/recruitment/letter-studio-page'
 import { DocumentSettingsPage } from '@/features/documents/document-settings-page'
@@ -100,6 +101,7 @@ const router = createBrowserRouter([
   { path: '/career', element: <Navigate to="/careers" replace /> },
   { path: '/careers', element: <CareersPage /> },
   { path: '/careers/jobs/:slug', element: <CareerJobPage /> },
+  { path: '/careers/offer/:token', element: <OfferResponsePage /> },
   { path: '/careers/login', element: <CandidateLoginPage /> },
   { path: '/careers/auth/:provider', element: <CandidateOAuthCallback /> },
   { path: '/careers/profile', element: <CandidateProfilePage /> },
