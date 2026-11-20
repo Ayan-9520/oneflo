@@ -272,7 +272,7 @@ function VisitorPopup() {
     setOpen(false)
   }
 
-  async function save(event: FormEvent) {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const body = Object.fromEntries([...new FormData(event.currentTarget).entries()].map(([key, value]) => [key, String(value).trim()]))
     setPending(true)
