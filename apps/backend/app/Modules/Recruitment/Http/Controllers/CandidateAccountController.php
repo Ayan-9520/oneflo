@@ -123,6 +123,22 @@ class CandidateAccountController extends Controller
         return ApiResponse::data($this->profile($account));
     }
 
+    public function photo(Request $request): JsonResponse
+    {
+        $account = $this->account($request);
+        $data = $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+        $path = $data['photo']->store('avatars', 'public');
+        if (is_string($account->avatar_url) && str_starts_with($account->avatar_url, '/storage/avatars/')) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete(substr($account->avatar_url, strlen('/storage/')));
+        }
+        $account->avatar_url = '/storage/'.$path;
+        $account->save();
+
+        return ApiResponse::data($this->profile($account));
+    }
+
     public function applications(Request $request): JsonResponse
     {
         $account = $this->account($request);

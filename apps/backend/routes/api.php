@@ -65,6 +65,7 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware(AuthenticateCandidate::class)->group(function (): void {
             Route::get('/me', [CandidateAccountController::class, 'me']);
             Route::put('/me', [CandidateAccountController::class, 'update']);
+            Route::post('/me/photo', [CandidateAccountController::class, 'photo']);
             Route::get('/me/applications', [CandidateAccountController::class, 'applications']);
             Route::get('/me/offers', [CandidateAccountController::class, 'offers']);
             Route::get('/me/letters', [CandidateAccountController::class, 'letters']);

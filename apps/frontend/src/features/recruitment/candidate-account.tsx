@@ -7,6 +7,7 @@ import {
   Briefcase,
   Building2,
   CalendarCheck,
+  Camera,
   CheckCircle2,
   Circle,
   Clock,
@@ -300,6 +301,20 @@ export function CandidateProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [skillsDraft, setSkillsDraft] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
+
+  async function uploadPhoto(file: File) {
+    setPhotoError(null)
+    const body = new FormData()
+    body.append('photo', file)
+    try {
+      const next = await candidateRequest<CandidateProfile>('/api/v1/candidate/me/photo', { method: 'POST', body })
+      queryClient.setQueryData(['candidate-me', candidateToken()], next)
+    } catch (caught) {
+      setPhotoError(caught instanceof Error ? caught.message : 'The photo could not be saved.')
+    }
+  }
 
   useEffect(() => {
     if (!candidateToken() || me.isError) navigate('/careers/login?next=/careers/profile', { replace: true })
@@ -359,10 +374,13 @@ export function CandidateProfilePage() {
                       ? <img src={profile.avatar_url} alt="" referrerPolicy="no-referrer" className="size-24 rounded-full border-4 border-white object-cover" />
                       : <span className="flex size-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#eef0ff] to-[#fdeaf4] text-4xl font-extrabold text-[#3a35e0]">{profile.full_name.slice(0, 1).toUpperCase()}</span>}
                   </div>
-                  {profile.email_verified || profile.phone_verified ? <span className="absolute bottom-1 right-1 flex size-7 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-white" title="Verified"><BadgeCheck className="size-4" /></span> : null}
+                  {profile.email_verified || profile.phone_verified ? <span className="absolute left-1 top-1 flex size-6 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-white" title="Verified"><BadgeCheck className="size-3.5" /></span> : null}
+                  <button type="button" onClick={() => photoInput.current?.click()} className="absolute bottom-1 right-1 flex size-8 items-center justify-center rounded-full border-2 border-white bg-[#3a35e0] text-white shadow-md hover:bg-[#6d38d6]" title="Add your photo" aria-label="Add your photo"><Camera className="size-4" /></button>
+                  <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadPhoto(file); event.target.value = '' }} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">{profile.full_name}</h1>
+                  {photoError ? <p className="mt-1 text-xs font-semibold text-rose-600">{photoError}</p> : null}
                   <p className="mt-1 text-base text-slate-600">{profile.headline || subtitle || <span className="italic text-slate-400">Add a headline so recruiters know what you do</span>}</p>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
                     {profile.location ? <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-slate-700"><MapPin className="size-3.5" />{profile.location}</span> : null}
