@@ -98,6 +98,8 @@ Route::prefix('v1')->group(function (): void {
 
         Route::middleware(['verified', RequireOrganizationContext::class, EnforcePlan::class])->group(function (): void {
             Route::get('/roles', [RoleController::class, 'index']);
+            Route::get('/access/users', [\App\Modules\Identity\Http\Controllers\AccessUserController::class, 'index']);
+            Route::post('/access/users', [\App\Modules\Identity\Http\Controllers\AccessUserController::class, 'store']);
             Route::get('/organization-domains', [OrganizationDomainController::class, 'index']);
             Route::post('/organization-domains', [OrganizationDomainController::class, 'store']);
             Route::post('/organization-domains/{organizationDomain}/verify', [OrganizationDomainController::class, 'verify']);

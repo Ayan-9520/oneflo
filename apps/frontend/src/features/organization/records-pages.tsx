@@ -106,8 +106,94 @@ export function BusinessesPage() {
   )
 }
 
+type AccessUser = { id: number; name: string; email: string; role: string | null; is_active: boolean }
+
+function AccessUsers({ roles }: { roles: NamedRecord[] }) {
+  const { organizationId, account } = useSession()
+  const queryClient = useQueryClient()
+  const notify = useToast().notify
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const businesses = account?.organizations ?? []
+  const [selected, setSelected] = useState<number[]>(organizationId === null ? [] : [organizationId])
+  const users = useQuery({ queryKey: ['access-users', organizationId], queryFn: () => apiData<AccessUser[]>('/api/v1/access/users') })
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const body = new FormData(form)
+    if (selected.length === 0) { setError('Choose at least one business.'); return }
+    setPending(true)
+    setError(null)
+    try {
+      await apiData('/api/v1/access/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: String(body.get('name') ?? ''),
+          email: String(body.get('email') ?? ''),
+          password: String(body.get('password') ?? '') || null,
+          role: String(body.get('role') ?? ''),
+          organization_ids: selected,
+        }),
+      })
+      form.reset()
+      setOpen(false)
+      notify('User added. They can sign in with this email and password.', 'success')
+      await queryClient.invalidateQueries({ queryKey: ['access-users'] })
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'The user could not be added.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Users</h2>
+        <Button onClick={() => setOpen((value) => !value)}>{open ? 'Close' : 'Add user'}</Button>
+      </div>
+      {open ? (
+        <form onSubmit={(event) => void submit(event)} className="grid gap-3 rounded-2xl border border-border bg-muted/30 p-4 sm:grid-cols-2">
+          <Field label="Full name" htmlFor="au-name"><Input id="au-name" name="name" required /></Field>
+          <Field label="Work email" htmlFor="au-email"><Input id="au-email" name="email" type="email" required /></Field>
+          <Field label="Password (min 8, leave blank if the user already exists)" htmlFor="au-pass"><Input id="au-pass" name="password" type="password" minLength={8} autoComplete="new-password" /></Field>
+          <Field label="Role" htmlFor="au-role">
+            <select id="au-role" name="role" defaultValue="hr-admin" className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
+              {roles.map((role) => <option key={role.slug} value={role.slug}>{role.name}</option>)}
+            </select>
+          </Field>
+          <fieldset className="sm:col-span-2">
+            <legend className="mb-2 text-sm font-medium">Businesses</legend>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setSelected(businesses.map((item) => item.id))} className="rounded-full border border-border px-3 py-1 text-xs font-semibold hover:bg-muted">Select all</button>
+              {businesses.map((business) => (
+                <label key={business.id} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-sm ${selected.includes(business.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border'}`}>
+                  <input type="checkbox" className="sr-only" checked={selected.includes(business.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, business.id] : current.filter((id) => id !== business.id))} />
+                  {business.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {error ? <p role="alert" className="text-sm text-[#b42318] sm:col-span-2">{error}</p> : null}
+          <div className="w-fit sm:col-span-2"><Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save user'}</Button></div>
+        </form>
+      ) : null}
+      {users.isPending ? <Skeleton className="h-16 w-full" /> : (users.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No users in this business yet.</p> : (
+        <DataTable caption="Users" rows={users.data ?? []} getRowId={(row) => String(row.id)} columns={[
+          { id: 'name', header: 'Name', cell: (row) => row.name },
+          { id: 'email', header: 'Email', cell: (row) => row.email },
+          { id: 'role', header: 'Role', cell: (row) => row.role ?? '' },
+          { id: 'status', header: 'Status', cell: (row) => row.is_active ? 'Active' : 'Inactive' },
+        ]} />
+      )}
+    </section>
+  )
+}
+
 export function AccessPage() {
-  const { organizationId } = useSession()
+  const { organizationId, permissions } = useSession()
   const roles = useQuery({
     queryKey: ['roles', organizationId],
     enabled: organizationId !== null,
@@ -118,9 +204,13 @@ export function AccessPage() {
     <div>
       <PageHeader
         title="Access"
-        description="Roles and permissions available in the active business."
+        description="Users, roles and permissions available in the active business."
         crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Access' }]}
       />
+      {organizationId !== null && permissions.has('users.manage') ? (
+        <AccessUsers roles={(roles.data?.roles ?? []).filter((role) => role.scope === 'organization')} />
+      ) : null}
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Roles</h2>
       {organizationId === null ? (
         <EmptyState title="Select a business" description="Role assignments are scoped to a business." />
       ) : roles.isPending ? (
