@@ -6,7 +6,6 @@ namespace App\Modules\Recruitment\Services;
 
 use App\Models\Candidate;
 use App\Models\CandidateResume;
-use App\Models\DocumentSequence;
 use App\Models\Employee;
 use App\Models\Interview;
 use App\Models\InterviewFeedback;
@@ -15,9 +14,12 @@ use App\Models\JobOffer;
 use App\Models\JobOpening;
 use App\Models\JobRequisition;
 use App\Models\LegalEntity;
+use App\Models\OfferApproval;
 use App\Models\OnboardingProfile;
 use App\Models\OnboardingTask;
+use App\Models\RequisitionApproval;
 use App\Models\User;
+use App\Modules\Organization\Services\EmployeeCodeGenerator;
 use App\Modules\Organization\Services\EmployeeLifecycle;
 use App\Services\AuditLogger;
 use App\Services\OrganizationContext;
@@ -32,7 +34,78 @@ final class RecruitmentService
         private readonly OrganizationContext $context,
         private readonly AuditLogger $audit,
         private readonly EmployeeLifecycle $lifecycle,
+        private readonly EmployeeCodeGenerator $codes,
     ) {}
+
+    public function submitRequisition(JobRequisition $requisition, User $actor): JobRequisition
+    {
+        if ($requisition->status !== 'draft') {
+            throw ValidationException::withMessages(['status' => ['Only a draft requisition can be submitted.']]);
+        }
+        $requisition->status = 'pending_approval';
+        $requisition->submitted_by = $actor->id;
+        $requisition->submitted_at = now();
+        $requisition->save();
+        $this->recordRequisition($requisition, $actor, 'submitted', null);
+        $this->audit->accessChange($actor, $this->context->get(), 'requisition.submitted', ['requisition_id' => $requisition->id]);
+
+        return $requisition;
+    }
+
+    public function approveRequisition(JobRequisition $requisition, User $actor, ?string $comments): JobRequisition
+    {
+        if ($requisition->status !== 'pending_approval') {
+            throw ValidationException::withMessages(['status' => ['The requisition is not waiting for approval.']]);
+        }
+
+        return DB::transaction(function () use ($requisition, $actor, $comments): JobRequisition {
+            $locked = JobRequisition::query()->whereKey($requisition->id)->lockForUpdate()->first();
+            if ($locked->status !== 'pending_approval') {
+                throw ValidationException::withMessages(['status' => ['This requisition was already decided.']]);
+            }
+            $locked->status = 'approved';
+            $locked->save();
+            $this->recordRequisition($locked, $actor, 'approved', $comments);
+            $this->audit->accessChange($actor, $this->context->get(), 'requisition.approved', ['requisition_id' => $locked->id]);
+
+            return $locked;
+        });
+    }
+
+    public function rejectRequisition(JobRequisition $requisition, User $actor, string $comments): JobRequisition
+    {
+        if ($requisition->status !== 'pending_approval') {
+            throw ValidationException::withMessages(['status' => ['The requisition is not waiting for approval.']]);
+        }
+
+        return DB::transaction(function () use ($requisition, $actor, $comments): JobRequisition {
+            $locked = JobRequisition::query()->whereKey($requisition->id)->lockForUpdate()->first();
+            if ($locked->status !== 'pending_approval') {
+                throw ValidationException::withMessages(['status' => ['This requisition was already decided.']]);
+            }
+            $locked->status = 'rejected';
+            $locked->save();
+            $this->recordRequisition($locked, $actor, 'rejected', $comments);
+            $this->audit->accessChange($actor, $this->context->get(), 'requisition.rejected', ['requisition_id' => $locked->id]);
+
+            return $locked;
+        });
+    }
+
+    public function closeRequisition(JobRequisition $requisition, User $actor, string $status): JobRequisition
+    {
+        if (! in_array($status, ['closed', 'archived'], true) || ! in_array($requisition->status, ['approved', 'closed'], true)) {
+            throw ValidationException::withMessages(['status' => ['Only an approved requisition can be closed or archived.']]);
+        }
+        if ($status === 'closed' && $requisition->status !== 'approved') {
+            throw ValidationException::withMessages(['status' => ['Only an approved requisition can be closed.']]);
+        }
+        $requisition->status = $status;
+        $requisition->save();
+        JobOpening::query()->where('job_requisition_id', $requisition->id)->where('status', 'open')->update(['status' => 'closed']);
+
+        return $requisition;
+    }
 
     public function schedule(JobApplication $application, string $scheduledAt, string $interviewer, string $mode): Interview
     {
@@ -66,9 +139,10 @@ final class RecruitmentService
         if ($offer->status !== 'draft') {
             throw ValidationException::withMessages(['status' => ['Only a draft offer can be submitted.']]);
         }
-        $offer->status = 'submitted';
+        $offer->status = 'pending_approval';
         $offer->submitted_by = $actor->id;
         $offer->save();
+        $this->recordOffer($offer, $actor, 'submitted', null);
         $this->audit->accessChange($actor, $this->context->get(), 'offer.submitted', ['offer_id' => $offer->id]);
 
         return $offer;
@@ -76,30 +150,87 @@ final class RecruitmentService
 
     public function approveOffer(JobOffer $offer, User $actor): JobOffer
     {
-        if ($offer->status !== 'submitted') {
+        if (! in_array($offer->status, ['submitted', 'pending_approval'], true)) {
             throw ValidationException::withMessages(['status' => ['The offer is not waiting for approval.']]);
         }
         if ($offer->submitted_by === $actor->id) {
             throw ValidationException::withMessages(['status' => ['The person who submitted the offer cannot approve it.']]);
         }
-        $offer->status = 'approved';
-        $offer->approved_by = $actor->id;
+
+        return DB::transaction(function () use ($offer, $actor): JobOffer {
+            $locked = JobOffer::query()->whereKey($offer->id)->lockForUpdate()->first();
+            if (! in_array($locked->status, ['submitted', 'pending_approval'], true)) {
+                throw ValidationException::withMessages(['status' => ['This offer was already decided.']]);
+            }
+            $locked->status = 'approved';
+            $locked->approved_by = $actor->id;
+            $locked->save();
+            $application = $locked->application;
+            $application->stage = 'offer';
+            $application->save();
+            $this->recordOffer($locked, $actor, 'approved', null);
+            $this->audit->accessChange($actor, $this->context->get(), 'offer.approved', ['offer_id' => $locked->id]);
+
+            return $locked;
+        });
+    }
+
+    public function rejectOffer(JobOffer $offer, User $actor, string $comments): JobOffer
+    {
+        if (! in_array($offer->status, ['submitted', 'pending_approval'], true)) {
+            throw ValidationException::withMessages(['status' => ['The offer is not waiting for approval.']]);
+        }
+
+        return DB::transaction(function () use ($offer, $actor, $comments): JobOffer {
+            $locked = JobOffer::query()->whereKey($offer->id)->lockForUpdate()->first();
+            if (! in_array($locked->status, ['submitted', 'pending_approval'], true)) {
+                throw ValidationException::withMessages(['status' => ['This offer was already decided.']]);
+            }
+            $locked->status = 'rejected';
+            $locked->decision_note = $comments;
+            $locked->save();
+            $this->recordOffer($locked, $actor, 'rejected', $comments);
+            $this->audit->accessChange($actor, $this->context->get(), 'offer.rejected', ['offer_id' => $locked->id]);
+
+            return $locked;
+        });
+    }
+
+    public function sendOffer(JobOffer $offer, User $actor): JobOffer
+    {
+        if ($offer->status !== 'approved') {
+            throw ValidationException::withMessages(['status' => ['Only an approved offer can be issued.']]);
+        }
+        $offer->status = 'sent';
+        $offer->sent_at = now();
         $offer->save();
-        $application = $offer->application;
-        $application->stage = 'offer';
-        $application->save();
-        $this->audit->accessChange($actor, $this->context->get(), 'offer.approved', ['offer_id' => $offer->id]);
+        $this->audit->accessChange($actor, $this->context->get(), 'offer.sent', ['offer_id' => $offer->id]);
 
         return $offer;
     }
 
-    public function acceptOffer(JobOffer $offer): JobOffer
+    public function acceptOffer(JobOffer $offer, User $actor): JobOffer
     {
-        if ($offer->status !== 'approved') {
-            throw ValidationException::withMessages(['status' => ['An offer can be accepted after approval.']]);
+        if (! in_array($offer->status, ['approved', 'sent'], true)) {
+            throw ValidationException::withMessages(['status' => ['An offer can be accepted after it is approved.']]);
         }
         $offer->status = 'accepted';
+        $offer->accepted_at = now();
         $offer->save();
+        $this->audit->accessChange($actor, $this->context->get(), 'offer.accepted', ['offer_id' => $offer->id]);
+
+        return $offer;
+    }
+
+    public function declineOffer(JobOffer $offer, User $actor): JobOffer
+    {
+        if (! in_array($offer->status, ['approved', 'sent'], true)) {
+            throw ValidationException::withMessages(['status' => ['An offer can be declined after it is approved.']]);
+        }
+        $offer->status = 'declined';
+        $offer->declined_at = now();
+        $offer->save();
+        $this->audit->accessChange($actor, $this->context->get(), 'offer.declined', ['offer_id' => $offer->id]);
 
         return $offer;
     }
@@ -134,7 +265,7 @@ final class RecruitmentService
                 throw ValidationException::withMessages(['legal_entity_id' => ['The legal employer was not found.']]);
             }
             $employee = $this->lifecycle->hire([
-                'employee_code' => $this->nextEmployeeCode(),
+                'employee_code' => $this->codes->next($entity),
                 'given_name' => $candidate->given_name,
                 'family_name' => $candidate->family_name,
                 'email' => $candidate->email,
@@ -193,19 +324,25 @@ final class RecruitmentService
         ]);
     }
 
-    private function nextEmployeeCode(): string
+    private function recordRequisition(JobRequisition $requisition, User $actor, string $decision, ?string $comments): void
     {
-        $sequence = DocumentSequence::query()->firstOrCreate(
-            ['series' => 'employee'],
-            ['last_number' => 0],
-        );
-        $sequence->last_number++;
-        $sequence->save();
-        $code = 'EMP-'.str_pad((string) $sequence->last_number, 5, '0', STR_PAD_LEFT);
-        if (Employee::query()->where('employee_code', $code)->exists()) {
-            return $this->nextEmployeeCode();
-        }
+        RequisitionApproval::query()->create([
+            'job_requisition_id' => $requisition->id,
+            'approver_user_id' => $actor->id,
+            'decision' => $decision,
+            'comments' => $comments,
+            'acted_at' => now(),
+        ]);
+    }
 
-        return $code;
+    private function recordOffer(JobOffer $offer, User $actor, string $decision, ?string $comments): void
+    {
+        OfferApproval::query()->create([
+            'job_offer_id' => $offer->id,
+            'approver_user_id' => $actor->id,
+            'decision' => $decision,
+            'comments' => $comments,
+            'acted_at' => now(),
+        ]);
     }
 }

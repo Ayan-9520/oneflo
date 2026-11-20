@@ -32,18 +32,18 @@ export function AppShell() {
   }, [items, query])
 
   return (
-    <div className="min-h-svh bg-background">
-      <div className="flex min-h-svh">
+    <div className="h-svh overflow-hidden bg-background">
+      <div className="flex h-svh">
         <aside
           className={cn(
-            'hidden shrink-0 flex-col bg-gradient-to-b from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-white lg:flex',
+            'hidden h-svh shrink-0 flex-col bg-gradient-to-b from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-white lg:flex',
             collapsed ? 'w-[4.75rem]' : 'w-64',
           )}
         >
           <SidebarBody items={items} collapsed={collapsed} pathname={location.pathname} />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-[#f4f6fb]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-[#f4f6fb]">
           <header className="sticky top-0 z-20 border-b border-border bg-card">
             <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5">
               <Button className="lg:hidden" size="icon" variant="ghost" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>

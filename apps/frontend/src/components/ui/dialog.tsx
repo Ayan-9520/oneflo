@@ -36,7 +36,8 @@ export function Dialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className="w-[min(32rem,calc(100%-2rem))] rounded-xl border border-border bg-card p-0 text-foreground shadow-[var(--shadow-card)] backdrop:bg-[#1c1433]/40"
+      className="hidden max-h-[min(44rem,calc(100%-2rem))] w-[min(40rem,calc(100%-2rem))] open:flex open:flex-col rounded-3xl border border-[#e4dfef] bg-white p-0 text-foreground shadow-[0_24px_80px_rgb(28_20_51/0.22)] backdrop:bg-[#1c1433]/45"
+      style={{ position: 'fixed', inset: 'auto', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', margin: 0 }}
       onClose={onClose}
       onClick={(event) => {
         if (event.target === ref.current) {
@@ -55,7 +56,7 @@ export function Dialog({
           <X className="size-4" />
         </Button>
       </div>
-      <div className="px-5 py-4">{children}</div>
+      <div className="overflow-y-auto px-5 py-4">{children}</div>
     </dialog>
   )
 }

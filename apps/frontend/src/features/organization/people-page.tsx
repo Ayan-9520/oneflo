@@ -105,11 +105,11 @@ export function PeoplePage() {
               Export
             </Button>
             {canCreate ? (
-              <Button variant="outline" onClick={() => setImporting(true)}>
+              <Button variant="outline" onClick={() => { setAdding(false); setImporting(true) }}>
                 Import
               </Button>
             ) : null}
-            {canCreate ? <Button onClick={() => setAdding(true)}>Add employee</Button> : null}
+            {canCreate ? <Button onClick={() => { setImporting(false); setAdding(true) }}>Add employee</Button> : null}
           </>
         }
       />
@@ -253,9 +253,23 @@ function EmployeeFormDialog({ open, onClose }: { open: boolean; onClose: () => v
       joined_on: String(form.get('joined_on') ?? '') || null,
       work_location: String(form.get('work_location') ?? '') || null,
     }
-    for (const field of ['department_id', 'designation_id', 'branch_id', 'legal_entity_id', 'brand_id', 'manager_id']) {
+    for (const field of ['branch_id', 'legal_entity_id', 'brand_id', 'manager_id']) {
       const value = String(form.get(field) ?? '')
       if (value !== '') body[field] = Number(value)
+    }
+    const departmentName = String(form.get('new_department') ?? '').trim()
+    const designationName = String(form.get('new_designation') ?? '').trim()
+    if (departmentName !== '') {
+      const created = await apiData<{ id: number }>('/api/v1/departments', { method: 'POST', body: JSON.stringify({ name: departmentName }) })
+      body.department_id = created.id
+    } else if (String(form.get('department_id') ?? '') !== '') {
+      body.department_id = Number(form.get('department_id'))
+    }
+    if (designationName !== '') {
+      const created = await apiData<{ id: number }>('/api/v1/designations', { method: 'POST', body: JSON.stringify({ name: designationName }) })
+      body.designation_id = created.id
+    } else if (String(form.get('designation_id') ?? '') !== '') {
+      body.designation_id = Number(form.get('designation_id'))
     }
     setPending(true)
     setError(null)
@@ -263,6 +277,8 @@ function EmployeeFormDialog({ open, onClose }: { open: boolean; onClose: () => v
       await apiData('/api/v1/employees', { method: 'POST', body: JSON.stringify(body) })
       notify('Employee added.', 'success')
       await queryClient.invalidateQueries({ queryKey: ['employees'] })
+      await queryClient.invalidateQueries({ queryKey: ['departments'] })
+      await queryClient.invalidateQueries({ queryKey: ['designations'] })
       onClose()
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : new ApiError('The employee could not be added.', 0))
@@ -301,10 +317,16 @@ function EmployeeFormDialog({ open, onClose }: { open: boolean; onClose: () => v
           <Select id="brand_id" name="brand_id" placeholder="Select" options={(brands.data ?? []).map((brand) => ({ value: String(brand.id), label: brand.name }))} />
         </Field>
         <Field label="Department" htmlFor="department_id" error={message('department_id')}>
-          <Select id="department_id" name="department_id" placeholder="Select" options={(departments.data ?? []).map((item) => ({ value: String(item.id), label: item.name }))} />
+          <Select id="department_id" name="department_id" placeholder={departments.data?.length ? 'Select' : 'None saved yet'} options={(departments.data ?? []).map((item) => ({ value: String(item.id), label: item.name }))} />
+        </Field>
+        <Field label="New department" htmlFor="new_department" error={message('new_department')}>
+          <Input id="new_department" name="new_department" placeholder="Type a name to create one" />
         </Field>
         <Field label="Designation" htmlFor="designation_id" error={message('designation_id')}>
-          <Select id="designation_id" name="designation_id" placeholder="Select" options={(designations.data ?? []).map((item) => ({ value: String(item.id), label: item.name }))} />
+          <Select id="designation_id" name="designation_id" placeholder={designations.data?.length ? 'Select' : 'None saved yet'} options={(designations.data ?? []).map((item) => ({ value: String(item.id), label: item.name }))} />
+        </Field>
+        <Field label="New designation" htmlFor="new_designation" error={message('new_designation')}>
+          <Input id="new_designation" name="new_designation" placeholder="Type a name to create one" />
         </Field>
         <Field label="Branch" htmlFor="branch_id" error={message('branch_id')}>
           <Select id="branch_id" name="branch_id" placeholder="Select" options={(branches.data ?? []).map((item) => ({ value: String(item.id), label: item.name }))} />

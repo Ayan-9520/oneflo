@@ -54,6 +54,7 @@ class RecruitmentOnboardingTest extends TestCase
             'description' => 'Analyse operations for the legal employer.',
             'headcount' => 1,
         ], $this->header($organization))->assertCreated()->json('data.id');
+        $this->postJson('/api/v1/recruitment/requisitions/'.$requisition.'/submit', [], $this->header($organization))->assertOk();
         $this->postJson('/api/v1/recruitment/requisitions/'.$requisition.'/approve', [], $this->header($organization))->assertOk();
         $opening = $this->postJson('/api/v1/recruitment/requisitions/'.$requisition.'/openings', [], $this->header($organization))->assertCreated()->json('data.id');
         $candidate = $this->postJson('/api/v1/recruitment/candidates', [

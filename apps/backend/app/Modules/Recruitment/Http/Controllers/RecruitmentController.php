@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\CandidateResume;
 use App\Models\Interview;
+use App\Models\Department;
+use App\Models\Designation;
 use App\Models\JobApplication;
 use App\Models\JobOffer;
 use App\Models\JobOpening;
@@ -44,30 +46,76 @@ class RecruitmentController extends Controller
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string'],
             'headcount' => ['required', 'integer', 'min:1'],
+            'department_id' => ['nullable', 'integer'],
+            'designation_id' => ['nullable', 'integer'],
             'organization_id' => ['prohibited'],
         ]);
         if (LegalEntity::query()->whereKey($data['legal_entity_id'])->doesntExist()) {
             abort(404, 'The requested resource was not found.');
+        }
+        if (! empty($data['department_id']) && Department::query()->whereKey($data['department_id'])->where('status', 'active')->doesntExist()) {
+            return ApiResponse::error('Choose a department in this business.', 422);
+        }
+        if (! empty($data['designation_id']) && Designation::query()->whereKey($data['designation_id'])->where('status', 'active')->doesntExist()) {
+            return ApiResponse::error('Choose a designation in this business.', 422);
         }
         $row = JobRequisition::query()->create([...$data, 'status' => 'draft']);
 
         return ApiResponse::data(['id' => $row->id, 'status' => $row->status], 201);
     }
 
-    public function approveRequisition(Request $request, JobRequisition $jobRequisition, AuthorizationService $authorization): JsonResponse
+    public function showRequisition(JobRequisition $jobRequisition, AuthorizationService $authorization): JsonResponse
+    {
+        $this->view($authorization);
+
+        return ApiResponse::data([
+            'id' => $jobRequisition->id,
+            'title' => $jobRequisition->title,
+            'status' => $jobRequisition->status,
+            'submitted_at' => $jobRequisition->submitted_at?->toIso8601String(),
+            'history' => \App\Models\RequisitionApproval::query()->where('job_requisition_id', $jobRequisition->id)->orderBy('id')->get(['decision', 'comments', 'approver_user_id', 'acted_at']),
+        ]);
+    }
+
+    public function submitRequisition(Request $request, JobRequisition $jobRequisition, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
     {
         $this->manage($request, $authorization);
-        $jobRequisition->status = 'approved';
-        $jobRequisition->save();
+        $row = $recruitment->submitRequisition($jobRequisition, $request->user());
 
-        return ApiResponse::data(['id' => $jobRequisition->id, 'status' => $jobRequisition->status]);
+        return ApiResponse::data(['id' => $row->id, 'status' => $row->status]);
+    }
+
+    public function approveRequisition(Request $request, JobRequisition $jobRequisition, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->approveRequisitions($request, $authorization);
+        $row = $recruitment->approveRequisition($jobRequisition, $request->user(), $request->input('comments'));
+
+        return ApiResponse::data(['id' => $row->id, 'status' => $row->status]);
+    }
+
+    public function rejectRequisition(Request $request, JobRequisition $jobRequisition, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->approveRequisitions($request, $authorization);
+        $data = $request->validate(['comments' => ['required', 'string', 'max:2000']]);
+        $row = $recruitment->rejectRequisition($jobRequisition, $request->user(), $data['comments']);
+
+        return ApiResponse::data(['id' => $row->id, 'status' => $row->status]);
+    }
+
+    public function closeRequisition(Request $request, JobRequisition $jobRequisition, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->manage($request, $authorization);
+        $data = $request->validate(['status' => ['required', Rule::in(['closed', 'archived'])]]);
+        $row = $recruitment->closeRequisition($jobRequisition, $request->user(), $data['status']);
+
+        return ApiResponse::data(['id' => $row->id, 'status' => $row->status]);
     }
 
     public function openings(AuthorizationService $authorization): JsonResponse
     {
         $this->view($authorization);
 
-        return ApiResponse::data(JobOpening::query()->orderByDesc('id')->get(['id', 'job_requisition_id', 'title', 'description', 'status', 'opened_on'])->all());
+        return ApiResponse::data(JobOpening::query()->orderByDesc('id')->get(['id', 'job_requisition_id', 'title', 'description', 'status', 'opened_on', 'slug', 'is_public'])->all());
     }
 
     public function storeOpening(Request $request, JobRequisition $jobRequisition, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
@@ -89,6 +137,7 @@ class RecruitmentController extends Controller
             'phone' => $candidate->phone,
             'source' => $candidate->source,
             'status' => $candidate->status,
+            'is_test_data' => $candidate->is_test_data,
         ])->all());
     }
 
@@ -221,10 +270,46 @@ class RecruitmentController extends Controller
         return ApiResponse::data(['id' => $offer->id, 'status' => $offer->status]);
     }
 
+    public function offers(AuthorizationService $authorization): JsonResponse
+    {
+        $this->view($authorization);
+
+        return ApiResponse::data(JobOffer::query()->orderByDesc('id')->get(['id', 'job_application_id', 'designation', 'status', 'submitted_by', 'approved_by'])->all());
+    }
+
+    public function showOffer(JobOffer $jobOffer, AuthorizationService $authorization): JsonResponse
+    {
+        $this->view($authorization);
+
+        return ApiResponse::data([
+            'id' => $jobOffer->id,
+            'status' => $jobOffer->status,
+            'designation' => $jobOffer->designation,
+            'history' => \App\Models\OfferApproval::query()->where('job_offer_id', $jobOffer->id)->orderBy('id')->get(['decision', 'comments', 'approver_user_id', 'acted_at']),
+        ]);
+    }
+
     public function approveOffer(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
     {
-        $this->manage($request, $authorization);
+        $this->approveOffers($request, $authorization);
         $offer = $recruitment->approveOffer($jobOffer, $request->user());
+
+        return ApiResponse::data(['id' => $offer->id, 'status' => $offer->status]);
+    }
+
+    public function rejectOffer(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->approveOffers($request, $authorization);
+        $data = $request->validate(['comments' => ['required', 'string', 'max:2000']]);
+        $offer = $recruitment->rejectOffer($jobOffer, $request->user(), $data['comments']);
+
+        return ApiResponse::data(['id' => $offer->id, 'status' => $offer->status]);
+    }
+
+    public function sendOffer(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->manage($request, $authorization);
+        $offer = $recruitment->sendOffer($jobOffer, $request->user());
 
         return ApiResponse::data(['id' => $offer->id, 'status' => $offer->status]);
     }
@@ -232,7 +317,19 @@ class RecruitmentController extends Controller
     public function acceptOffer(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
     {
         $this->manage($request, $authorization);
-        $offer = $recruitment->acceptOffer($jobOffer);
+        $before = \App\Models\Employee::query()->count();
+        $offer = $recruitment->acceptOffer($jobOffer, $request->user());
+        if (\App\Models\Employee::query()->count() !== $before) {
+            abort(500, 'Accepting an offer must not create an employee.');
+        }
+
+        return ApiResponse::data(['id' => $offer->id, 'status' => $offer->status]);
+    }
+
+    public function declineOffer(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
+    {
+        $this->manage($request, $authorization);
+        $offer = $recruitment->declineOffer($jobOffer, $request->user());
 
         return ApiResponse::data(['id' => $offer->id, 'status' => $offer->status]);
     }
@@ -240,6 +337,7 @@ class RecruitmentController extends Controller
     public function convert(Request $request, JobOffer $jobOffer, AuthorizationService $authorization, RecruitmentService $recruitment): JsonResponse
     {
         $authorization->authorizePermission($request->user(), 'employees.create');
+        $authorization->authorizePermission($request->user(), 'recruitment.joining.confirm');
         $this->manage($request, $authorization);
         $data = $request->validate(['joined_on' => ['required', 'date']]);
         $employee = $recruitment->convert($jobOffer, $request->user(), $data['joined_on']);
@@ -255,5 +353,15 @@ class RecruitmentController extends Controller
     private function manage(Request $request, AuthorizationService $authorization): void
     {
         $authorization->authorizePermission($request->user(), 'recruitment.manage');
+    }
+
+    private function approveRequisitions(Request $request, AuthorizationService $authorization): void
+    {
+        $authorization->authorizePermission($request->user(), 'recruitment.requisitions.approve');
+    }
+
+    private function approveOffers(Request $request, AuthorizationService $authorization): void
+    {
+        $authorization->authorizePermission($request->user(), 'recruitment.offers.approve');
     }
 }

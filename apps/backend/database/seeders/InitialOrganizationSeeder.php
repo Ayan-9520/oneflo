@@ -87,6 +87,7 @@ class InitialOrganizationSeeder extends Seeder
             ['name' => 'Motorcart', 'slug' => 'motorcart'],
             ['name' => 'Propancer', 'slug' => 'propancer'],
             ['name' => 'UdhyamSetu', 'slug' => 'udhyamsetu'],
+            ['name' => 'TravelBridge', 'slug' => 'travelbridge'],
         ];
     }
 

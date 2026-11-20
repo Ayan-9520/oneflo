@@ -11,7 +11,12 @@ class Candidate extends Model
 {
     use BelongsToOrganization;
 
-    protected $fillable = ['given_name', 'family_name', 'email', 'phone', 'source', 'status'];
+    protected $fillable = ['candidate_account_id', 'given_name', 'family_name', 'email', 'phone', 'source', 'status', 'location', 'experience_years', 'current_company', 'current_designation', 'notice_period', 'qualification', 'skills', 'is_test_data', 'notes', 'candidate_import_id'];
+
+    protected function casts(): array
+    {
+        return ['is_test_data' => 'boolean'];
+    }
 
     public function fullName(): string
     {

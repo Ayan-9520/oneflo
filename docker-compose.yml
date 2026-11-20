@@ -44,8 +44,8 @@ services:
       REDIS_PORT: 6379
       FILESYSTEM_DISK: local
       RUN_MIGRATIONS: "true"
-      SANCTUM_STATEFUL_DOMAINS: localhost:5173,127.0.0.1:5173,localhost,127.0.0.1
-      ONEFLO_PLATFORM_HOSTS: localhost,127.0.0.1,nginx
+      SANCTUM_STATEFUL_DOMAINS: localhost:5173,127.0.0.1:5173,localhost,127.0.0.1,*.vercel.app
+      ONEFLO_PLATFORM_HOSTS: localhost,127.0.0.1,nginx,*.trycloudflare.com
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
       SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-OneFlo Super Admin}

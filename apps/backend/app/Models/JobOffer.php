@@ -12,7 +12,16 @@ class JobOffer extends Model
 {
     use BelongsToOrganization;
 
-    protected $fillable = ['job_application_id', 'legal_entity_id', 'designation', 'compensation_note', 'status', 'submitted_by', 'approved_by'];
+    protected $fillable = ['job_application_id', 'legal_entity_id', 'designation', 'compensation_note', 'status', 'decision_note', 'submitted_by', 'approved_by', 'sent_at', 'accepted_at', 'declined_at'];
+
+    protected function casts(): array
+    {
+        return [
+            'sent_at' => 'datetime',
+            'accepted_at' => 'datetime',
+            'declined_at' => 'datetime',
+        ];
+    }
 
     public function application(): BelongsTo
     {

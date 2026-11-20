@@ -8,6 +8,7 @@ import { ForgotPasswordPage, ResetPasswordPage } from '@/features/auth/password-
 import { LoginPage } from '@/features/auth/login-page'
 import { DesignSystemPage } from '@/features/design-system/design-system-page'
 import { AccessPage, BusinessesPage } from '@/features/organization/records-pages'
+import { MasterDataPage } from '@/features/organization/master-data-page'
 import { PeoplePage } from '@/features/organization/people-page'
 import { EmployeeProfilePage } from '@/features/organization/employee-profile-page'
 import { TeamPage } from '@/features/organization/team-page'
@@ -17,6 +18,9 @@ import { LeavePage } from '@/features/attendance/leave-page'
 import { PayrollPage } from '@/features/payroll/payroll-page'
 import { AssetsPage, EngagementPage, ExpensesPage, HelpdeskPage, PerformancePage } from '@/features/operations/operations-pages'
 import { OnboardingPage } from '@/features/recruitment/onboarding-page'
+import { CandidateOAuthCallback, CandidateProfilePage } from '@/features/recruitment/candidate-account'
+import { CandidateLoginPage } from '@/features/recruitment/candidate-auth-page'
+import { CareerJobPage, CareersPage } from '@/features/recruitment/careers-page'
 import { RecruitmentPage } from '@/features/recruitment/recruitment-page'
 import { LetterStudioPage } from '@/features/recruitment/letter-studio-page'
 import { DocumentSettingsPage } from '@/features/documents/document-settings-page'
@@ -28,8 +32,10 @@ import { PlatformPage } from '@/features/saas/platform-page'
 import { OverviewPage } from '@/features/workspace/overview-page'
 import { AssistantPage, LoanPage, NotificationsPage, OrgChartPage, ProfilePage, TasksPage } from '@/features/workspace/hub-pages'
 import { BrandMark } from '@/components/brand-mark'
+import { HomePage } from '@/features/home/home-page'
+import { CategoriesPage, CompaniesPage, HowItWorksPage } from '@/features/home/public-pages'
 
-const dedicated = new Set(['/', '/help', '/design-system', '/businesses', '/people', '/team', '/access', '/documents', '/attendance', '/leave', '/approvals', '/payroll', '/recruitment', '/letters', '/onboarding', '/performance', '/assets', '/expenses', '/helpdesk', '/engagement', '/my-work', '/manager', '/reports', '/platform'])
+const dedicated = new Set(['/', '/help', '/design-system', '/businesses', '/master-data', '/people', '/team', '/access', '/documents', '/attendance', '/leave', '/approvals', '/payroll', '/recruitment', '/letters', '/onboarding', '/performance', '/assets', '/expenses', '/helpdesk', '/engagement', '/my-work', '/manager', '/reports', '/platform'])
 
 const moduleRoutes = navigation
   .filter((item) => !dedicated.has(item.to))
@@ -74,6 +80,7 @@ function RequireAccount() {
   }
 
   if (!account) {
+    if (location.pathname === '/') return <HomePage />
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
@@ -82,6 +89,17 @@ function RequireAccount() {
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/home', element: <HomePage /> },
+  { path: '/categories', element: <CategoriesPage /> },
+  { path: '/companies', element: <CompaniesPage /> },
+  { path: '/how-it-works', element: <HowItWorksPage /> },
+  { path: '/career', element: <Navigate to="/careers" replace /> },
+  { path: '/careers', element: <CareersPage /> },
+  { path: '/careers/jobs/:slug', element: <CareerJobPage /> },
+  { path: '/careers/login', element: <CandidateLoginPage /> },
+  { path: '/careers/auth/:provider', element: <CandidateOAuthCallback /> },
+  { path: '/careers/profile', element: <CandidateProfilePage /> },
+  { path: '/careers/:company', element: <CareersPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   {
@@ -92,6 +110,7 @@ const router = createBrowserRouter([
       { path: 'help', element: <HelpPage /> },
       { path: 'design-system', element: <DesignSystemPage /> },
       { path: 'businesses', element: <BusinessesPage /> },
+      { path: 'master-data', element: <MasterDataPage /> },
       { path: 'people', element: <PeoplePage /> },
       { path: 'people/:employeeId', element: <EmployeeProfilePage /> },
       { path: 'team', element: <TeamPage /> },

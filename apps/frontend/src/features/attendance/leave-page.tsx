@@ -38,20 +38,30 @@ export function LeavePage() {
   if (organizationId === null) return <EmptyState title="Select a business" description="Leave policies belong to the active business." />
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Leave" description="Balances, accrual, applications, and the holiday-aware calendar of requests." crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Leave' }]} />
-      {balances.isPending ? <Skeleton className="h-20 w-full" /> : balances.isError ? <ErrorState title="Balances could not be loaded" description={balances.error instanceof ApiError ? balances.error.message : 'Try again.'} /> : balances.data.length === 0 ? <EmptyState title="No leave balances" description="Accrue a policy to open balances for active employees." /> : (
-        <div id="leave-balance"><DataTable caption="Leave balances" rows={balances.data} getRowId={(row) => `${row.employee_id}-${row.leave_type_id}`} columns={[
-          { id: 'employee', header: 'Employee', cell: (row) => String(row.employee_id) },
-          { id: 'type', header: 'Type', cell: (row) => String(row.leave_type_id) },
-          { id: 'available', header: 'Available', cell: (row) => row.available_days },
-          { id: 'accrued', header: 'Accrued', cell: (row) => row.accrued_days },
-          { id: 'carried', header: 'Carried', cell: (row) => row.carried_days },
-          { id: 'used', header: 'Used', cell: (row) => row.used_days },
-        ]} /></div>
-      )}
-      <div id="leave-apply"><ApplicationForm types={types.data ?? []} /></div>
-      <ApplicationList query={applications} />
+    <div className="mx-auto flex max-w-5xl flex-col gap-8">
+      <PageHeader title="Leave" description="Apply for an employee, then set the leave type and the year's policy. Balances appear after a policy is accrued." crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Leave' }]} />
+      <section id="leave-apply" className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">Apply</h2>
+        <p className="text-sm text-muted-foreground">Choose a person from People and a leave type that has already been saved.</p>
+        <ApplicationForm types={types.data ?? []} />
+      </section>
+      <section className="flex flex-col gap-3 border-t border-border pt-6">
+        <h2 className="text-lg font-semibold">Applications</h2>
+        <ApplicationList query={applications} />
+      </section>
+      <section id="leave-balance" className="flex flex-col gap-3 border-t border-border pt-6">
+        <h2 className="text-lg font-semibold">Balances</h2>
+        {balances.isPending ? <Skeleton className="h-20 w-full" /> : balances.isError ? <ErrorState title="Balances could not be loaded" description={balances.error instanceof ApiError ? balances.error.message : 'Try again.'} /> : balances.data.length === 0 ? <p className="text-sm text-muted-foreground">No balance yet. Save a policy, then accrue it for active employees.</p> : (
+          <DataTable caption="Leave balances" rows={balances.data} getRowId={(row) => `${row.employee_id}-${row.leave_type_id}`} columns={[
+            { id: 'employee', header: 'Employee', cell: (row) => String(row.employee_id) },
+            { id: 'type', header: 'Type', cell: (row) => String(row.leave_type_id) },
+            { id: 'available', header: 'Available', cell: (row) => row.available_days },
+            { id: 'accrued', header: 'Accrued', cell: (row) => row.accrued_days },
+            { id: 'carried', header: 'Carried', cell: (row) => row.carried_days },
+            { id: 'used', header: 'Used', cell: (row) => row.used_days },
+          ]} />
+        )}
+      </section>
       {canManage ? <PolicyForms types={types.data ?? []} policies={policies.data ?? []} /> : null}
     </div>
   )
@@ -117,7 +127,7 @@ function ApplicationForm({ types }: { types: LeaveType[] }) {
       <Field label="To" htmlFor="leave-to"><Input id="leave-to" name="ends_on" type="date" required /></Field>
       <Field label="Reason" htmlFor="leave-reason"><Textarea id="leave-reason" name="reason" /></Field>
       {error ? <p className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
-      <Button type="submit" disabled={pending}>{pending ? 'Submitting…' : 'Apply'}</Button>
+      <div className="sm:col-span-2"><Button type="submit" disabled={pending}>{pending ? 'Submitting…' : 'Apply'}</Button></div>
     </form>
   )
 }
@@ -125,7 +135,7 @@ function ApplicationForm({ types }: { types: LeaveType[] }) {
 function ApplicationList({ query }: { query: ReturnType<typeof useQuery<Application[]>> }) {
   if (query.isPending) return <Skeleton className="h-24 w-full" />
   if (query.isError) return <ErrorState title="Applications could not be loaded" description={query.error instanceof ApiError ? query.error.message : 'Try again.'} />
-  if (query.data.length === 0) return <EmptyState title="No leave applications" description="Applications appear here after an employee applies." />
+  if (query.data.length === 0) return <p className="text-sm text-muted-foreground">No application yet.</p>
   return <ApplicationTable rows={query.data} />
 }
 
@@ -192,15 +202,24 @@ function PolicyForms({ types, policies }: { types: LeaveType[]; policies: LeaveP
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold">Policies</h2>
-      <ul className="text-sm">{policies.map((policy) => <li key={policy.id}>{policy.year} · {policy.leave_type} · {policy.annual_days} days · accrual {policy.accrual_days} · carry {policy.carry_forward_max}</li>)}</ul>
+    <section className="flex flex-col gap-6 border-t border-border pt-6">
+      <div>
+        <h2 className="text-lg font-semibold">Leave type</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Example: Casual leave, code CL, paid.</p>
+      </div>
       <form className="grid gap-3 sm:grid-cols-3" onSubmit={(event) => void createType(event)}>
         <Field label="Type name" htmlFor="type-name"><Input id="type-name" name="name" required /></Field>
         <Field label="Code" htmlFor="type-code"><Input id="type-code" name="code" required /></Field>
         <Field label="Paid" htmlFor="type-paid"><Select id="type-paid" name="paid" options={[{ value: '1', label: 'Paid' }, { value: '0', label: 'Unpaid' }]} /></Field>
-        <Button type="submit" disabled={pending}>Add type</Button>
+        <div className="sm:col-span-3"><Button type="submit" disabled={pending}>Add type</Button></div>
       </form>
+      <div>
+        <h2 className="text-lg font-semibold">Year policy</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Annual days, monthly accrual, carry-forward, and who approves.</p>
+        {policies.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No policy saved for this business.</p> : (
+          <ul className="mt-2 text-sm text-muted-foreground">{policies.map((policy) => <li key={policy.id}>{policy.year} · {policy.leave_type} · {policy.annual_days} days</li>)}</ul>
+        )}
+      </div>
       <form className="grid gap-3 sm:grid-cols-3" onSubmit={(event) => void createPolicy(event)}>
         <Field label="Type" htmlFor="policy-type"><Select id="policy-type" name="leave_type_id" placeholder="Type" options={types.map((type) => ({ value: String(type.id), label: type.name }))} /></Field>
         <Field label="Year" htmlFor="policy-year"><Input id="policy-year" name="year" type="number" required defaultValue={new Date().getFullYear()} /></Field>
@@ -210,7 +229,7 @@ function PolicyForms({ types, policies }: { types: LeaveType[]; policies: LeaveP
         <Field label="Encashment max" htmlFor="policy-encash"><Input id="policy-encash" name="encashment_max" type="number" step="0.5" defaultValue={0} /></Field>
         <Field label="Encashment" htmlFor="policy-encash-flag"><Select id="policy-encash-flag" name="encashment_allowed" options={[{ value: '0', label: 'Not allowed' }, { value: '1', label: 'Allowed' }]} /></Field>
         <Field label="Approval steps" htmlFor="policy-steps"><Input id="policy-steps" name="approval_steps" defaultValue="manager,hr" /></Field>
-        <Button type="submit" variant="outline" disabled={pending}>Save policy</Button>
+        <div className="sm:col-span-3"><Button type="submit" variant="outline" disabled={pending}>Save policy</Button></div>
       </form>
     </section>
   )

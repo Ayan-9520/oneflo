@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { useSession } from '@/app/session'
 import { Button } from '@/components/ui/button'
@@ -35,28 +35,60 @@ export function PayrollPage() {
   if (organizationId === null) return <EmptyState title="Select a business" description="Payroll belongs to the active business and its legal employer." />
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Payroll" description="Salary structures, confirmed statutory rules, and locked payroll for the legal employer. Rates are entered by the business and are not a legal certificate." crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Payroll' }]} />
-      {runs.isPending ? <Skeleton className="h-24 w-full" /> : runs.isError ? <ErrorState title="Payroll could not be loaded" description={runs.error instanceof ApiError ? runs.error.message : 'Try again.'} /> : runs.data.length === 0 ? <EmptyState title="No payroll runs" description="Open a month after the salary structure and attendance are ready." /> : (
-        <DataTable caption="Payroll runs" rows={runs.data} getRowId={(row) => String(row.id)} columns={[
-          { id: 'period', header: 'Month', cell: (row) => `${row.year}-${String(row.month).padStart(2, '0')}` },
-          { id: 'status', header: 'Status', cell: (row) => row.status },
-          { id: 'net', header: 'First net', cell: (row) => row.lines[0]?.net ?? '—' },
-          { id: 'warnings', header: 'Warnings', cell: (row) => String(row.warnings?.length ?? 0) },
-        ]} />
-      )}
-      <Form16Panel entities={entities.data ?? []} />
+    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+      <PageHeader title="Payroll" description="Build the salary, assign it to an employee, then open and lock the month. Figures are the business's own entries, not a legal certificate." crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Payroll' }]} />
+      <Section step="1" title="Payroll months" text="A month appears here after it is opened. Lock it only when the lines are correct.">
+        {runs.isPending ? <Skeleton className="h-24 w-full" /> : runs.isError ? <ErrorState title="Payroll could not be loaded" description={runs.error instanceof ApiError ? runs.error.message : 'Try again.'} /> : runs.data.length === 0 ? <p className="text-sm text-muted-foreground">No month is open for this business.</p> : (
+          <DataTable caption="Payroll runs" rows={runs.data} getRowId={(row) => String(row.id)} columns={[
+            { id: 'period', header: 'Month', cell: (row) => `${row.year}-${String(row.month).padStart(2, '0')}` },
+            { id: 'status', header: 'Status', cell: (row) => row.status },
+            { id: 'net', header: 'First net', cell: (row) => row.lines[0]?.net ?? '—' },
+            { id: 'warnings', header: 'Warnings', cell: (row) => String(row.warnings?.length ?? 0) },
+          ]} />
+        )}
+      </Section>
       {canProcess ? (
         <>
-          <ComponentForm />
-          <StructureForm entities={entities.data ?? []} components={components.data ?? []} />
-          <RuleForm entities={entities.data ?? []} rules={rules.data ?? []} />
-          <CompensationForm employees={employees.data ?? []} structures={structures.data ?? []} />
-          <RunForm entities={entities.data ?? []} runs={runs.data ?? []} />
+          <Section step="2" title="Salary components" text="Create Basic, HRA, or a deduction before a structure can use it.">
+            <SavedList empty="No component yet." items={(components.data ?? []).map((row) => `${row.name} · ${row.kind}`)} />
+            <ComponentForm />
+          </Section>
+          <Section step="3" title="Salary structure" text="Pick a legal employer, a name, and one or two monthly amounts.">
+            <SavedList empty="No structure yet." items={(structures.data ?? []).map((row) => row.name)} />
+            <StructureForm entities={entities.data ?? []} components={components.data ?? []} />
+          </Section>
+          <Section step="4" title="Assign to an employee" text="The employee must exist in People, and the structure must be saved above. PAN is stored encrypted.">
+            <CompensationForm employees={employees.data ?? []} structures={structures.data ?? []} />
+          </Section>
+          <Section step="5" title="Statutory rule" text="A draft is not used in payroll. Confirm it only after the legal employer has reviewed the rate.">
+            <SavedList empty="No rule yet." items={(rules.data ?? []).map((row) => `${row.code} from ${row.effective_on} · ${row.confirmed ? 'confirmed' : 'draft'}`)} />
+            <RuleForm entities={entities.data ?? []} />
+          </Section>
+          <Section step="6" title="Open, preview, and lock" text="Order is open, preview, submit, approve, then lock. Reverse keeps the lines and records the reversal.">
+            <RunForm entities={entities.data ?? []} runs={runs.data ?? []} />
+          </Section>
         </>
       ) : null}
+      <Section step="7" title="Salary tax statement" text="This reads locked payroll. The legal employer still issues Form 16 through the authorized process.">
+        <Form16Panel entities={entities.data ?? []} />
+      </Section>
     </div>
   )
+}
+
+function Section({ step, title, text, children }: { step: string; title: string; text: string; children: ReactNode }) {
+  return (
+    <section className="border-t border-border pt-6">
+      <h2 className="text-lg font-semibold">{step}. {title}</h2>
+      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{text}</p>
+      <div className="mt-4 flex flex-col gap-3">{children}</div>
+    </section>
+  )
+}
+
+function SavedList({ items, empty }: { items: string[]; empty: string }) {
+  if (items.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>
+  return <ul className="flex flex-wrap gap-2">{items.map((item) => <li key={item} className="rounded-full bg-[#f4f1fb] px-3 py-1 text-xs font-medium">{item}</li>)}</ul>
 }
 
 function usePayrollSubmit() {
@@ -101,7 +133,6 @@ function ComponentForm() {
   }
   return (
     <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
-      <h2 className="sm:col-span-2 text-base font-semibold">Salary component</h2>
       <Field label="Code" htmlFor="component-code"><Input id="component-code" name="code" required /></Field>
       <Field label="Name" htmlFor="component-name"><Input id="component-name" name="name" required /></Field>
       <Field label="Kind" htmlFor="component-kind">
@@ -143,7 +174,6 @@ function StructureForm({ entities, components }: { entities: Entity[]; component
   const componentOptions = components.map((component) => ({ value: String(component.id), label: component.name }))
   return (
     <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
-      <h2 className="sm:col-span-2 text-base font-semibold">Salary structure</h2>
       <EntitySelect entities={entities} id="structure-entity" />
       <Field label="Name" htmlFor="structure-name"><Input id="structure-name" name="name" required /></Field>
       <Field label="Effective on" htmlFor="structure-effective"><Input id="structure-effective" name="effective_on" type="date" required /></Field>
@@ -157,7 +187,7 @@ function StructureForm({ entities, components }: { entities: Entity[]; component
   )
 }
 
-function RuleForm({ entities, rules }: { entities: Entity[]; rules: Rule[] }) {
+function RuleForm({ entities }: { entities: Entity[] }) {
   const queryClient = useQueryClient()
   const notify = useToast().notify
   const [pending, setPending] = useState(false)
@@ -202,12 +232,18 @@ function RuleForm({ entities, rules }: { entities: Entity[]; rules: Rule[] }) {
 
   return (
     <form className="grid gap-3" onSubmit={(event) => void submit(event)}>
-      <h2 className="text-base font-semibold">Statutory rule</h2>
-      <p className="text-sm text-muted-foreground">Enter the rate, ceiling, slabs, and citation the legal employer has reviewed. A draft is not used in payroll until it is confirmed.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <EntitySelect entities={entities} id="rule-entity" />
         <Field label="Code" htmlFor="rule-code">
-          <Select id="rule-code" name="code" defaultValue="epf" options={['epf', 'esi', 'professional_tax', 'tds', 'tds_old', 'bonus', 'gratuity'].map((code) => ({ value: code, label: code }))} />
+          <Select id="rule-code" name="code" defaultValue="epf" options={[
+            { value: 'epf', label: 'EPF' },
+            { value: 'esi', label: 'ESI' },
+            { value: 'professional_tax', label: 'Professional tax' },
+            { value: 'tds', label: 'TDS, new regime' },
+            { value: 'tds_old', label: 'TDS, old regime' },
+            { value: 'bonus', label: 'Bonus' },
+            { value: 'gratuity', label: 'Gratuity' },
+          ]} />
         </Field>
         <Field label="Effective on" htmlFor="rule-effective"><Input id="rule-effective" name="effective_on" type="date" required /></Field>
         <Field label="Confirm now" htmlFor="rule-confirm">
@@ -216,7 +252,6 @@ function RuleForm({ entities, rules }: { entities: Entity[]; rules: Rule[] }) {
         <Field label="Citation" htmlFor="rule-citation"><Input id="rule-citation" name="citation" required placeholder="Notification or internal review reference" /></Field>
       </div>
       <Field label="Config JSON" htmlFor="rule-config"><Textarea id="rule-config" name="config" required rows={4} placeholder='{"employee_percent":0,"employer_percent":0,"wage_ceiling":null,"wage_components":["basic"]}' /></Field>
-      {rules.length > 0 ? <ul className="text-sm text-muted-foreground">{rules.slice(0, 6).map((rule) => <li key={rule.id}>{rule.code} from {rule.effective_on} — {rule.confirmed ? 'confirmed' : 'draft'}</li>)}</ul> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save rule'}</Button>
     </form>
@@ -237,7 +272,6 @@ function CompensationForm({ employees, structures }: { employees: EmployeeRow[];
   }
   return (
     <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
-      <h2 className="sm:col-span-2 text-base font-semibold">Employee compensation</h2>
       <Field label="Employee" htmlFor="comp-employee">
         <Select id="comp-employee" name="employee_id" placeholder="Employee" options={employees.map((employee) => ({ value: String(employee.id), label: `${employee.employee_code} ${employee.full_name}` }))} />
       </Field>
@@ -270,7 +304,6 @@ function RunForm({ entities, runs }: { entities: Entity[]; runs: PayrollRun[] })
   }
   return (
     <div className="grid gap-3">
-      <h2 className="text-base font-semibold">Payroll month</h2>
       <form className="grid gap-3 sm:grid-cols-3" onSubmit={(event) => void open(event)}>
         <EntitySelect entities={entities} id="run-entity" />
         <Field label="Month" htmlFor="run-period"><Input id="run-period" name="period" type="month" required /></Field>
@@ -318,8 +351,6 @@ function Form16Panel({ entities }: { entities: Entity[] }) {
   }
   return (
     <form className="grid gap-3" onSubmit={(event) => void submit(event)}>
-      <h2 className="text-base font-semibold">Draft salary tax computation</h2>
-      <p className="text-sm text-muted-foreground">OneFlo prepares the figures from locked payroll. The legal employer issues Form 16 through the authorized process.</p>
       <div className="grid gap-3 sm:grid-cols-3">
         <EntitySelect entities={entities} id="form16-entity" />
         <Field label="Financial year start" htmlFor="form16-year"><Input id="form16-year" name="financial_year" type="number" min="2000" required /></Field>

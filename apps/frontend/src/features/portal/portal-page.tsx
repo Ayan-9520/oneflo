@@ -35,6 +35,19 @@ type Team = {
   expenses: Array<{ id: number; employee: string | null; amount: string; status: string }>
 }
 
+function ReferralPanel() {
+  const referrals = useQuery({ queryKey: ['my-referrals'], queryFn: () => apiData<Array<{ id: number; job_title: string | null; status: string; slug: string | null; token: string }>>('/api/v1/me/referrals') })
+  if (referrals.isPending) return null
+  return (
+    <section className="text-sm">
+      <h2 className="text-base font-semibold">My referrals</h2>
+      {(referrals.data ?? []).length === 0 ? <p className="mt-2">You have not shared a public opening yet.</p> : (
+        <ul className="mt-2">{(referrals.data ?? []).map((row) => <li key={row.id}>{row.job_title} · {row.status}{row.slug ? ` · /careers/jobs/${row.slug}?ref=${row.token}` : ''}</li>)}</ul>
+      )}
+    </section>
+  )
+}
+
 async function downloadPayslip(id: number) {
   const response = await apiFetch(`/api/v1/payroll/lines/${id}/payslip`)
   if (!response.ok) return
@@ -77,6 +90,7 @@ export function MyWorkPage() {
         <h2 className="text-base font-semibold">Reporting manager</h2>
         <p className="mt-2">{data.profile.manager ? `${data.profile.manager.full_name}${data.profile.manager.email ? ` · ${data.profile.manager.email}` : ''}` : 'No reporting manager is recorded.'}</p>
       </section>
+      <ReferralPanel />
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-base font-semibold">Today</h2>
         <p className="mt-2 text-sm">{data.attendance_today ? `${data.attendance_today.status}${data.attendance_today.late_minutes > 0 ? ` · ${data.attendance_today.late_minutes} minutes late` : ''}` : 'No attendance is recorded yet today.'}</p>
@@ -243,7 +257,7 @@ export function ManagerPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="My team" description="People, attendance, leave, expenses, and reviews in your assigned scope." crumbs={[{ label: 'Workspace', to: '/' }, { label: 'My team' }]} />
-      {team.isPending ? (
+      {team.isPending || !data ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Skeleton className="h-24 rounded-2xl" />
           <Skeleton className="h-24 rounded-2xl" />

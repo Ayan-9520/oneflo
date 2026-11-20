@@ -48,6 +48,14 @@ export const navigation: readonly NavItem[] = [
     access: ['organizations.view', 'organization.manage'],
   },
   {
+    id: 'master-data',
+    label: 'Master data',
+    to: '/master-data',
+    description: 'Activate department and designation templates for this business, or add your own.',
+    icon: Building2,
+    access: ['organization.manage'],
+  },
+  {
     id: 'access',
     label: 'Access',
     to: '/access',

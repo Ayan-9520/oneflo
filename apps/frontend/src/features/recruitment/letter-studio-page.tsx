@@ -159,7 +159,7 @@ export function LetterStudioPage() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  const [theme, setTheme] = useState({ primary: '#3a35e0', secondary: '#6d38d6' })
+  const [, setTheme] = useState({ primary: '#3a35e0', secondary: '#6d38d6' })
   const [savedFile, setSavedFile] = useState<string | null>(null)
   const [letterSearch, setLetterSearch] = useState('')
   const [form, setForm] = useState({

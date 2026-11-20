@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuthenticateCandidate;
 use App\Http\Middleware\EnforcePlan;
+use App\Modules\Recruitment\Http\Controllers\CandidateAccountController;
 use App\Http\Middleware\RequireOrganizationContext;
 use App\Modules\Attendance\Http\Controllers\AttendanceController;
 use App\Modules\Attendance\Http\Controllers\LeaveController;
@@ -29,6 +31,8 @@ use App\Modules\Recruitment\Http\Controllers\OnboardingController;
 use App\Modules\Saas\Http\Controllers\AdvancedController;
 use App\Modules\Saas\Http\Controllers\PlatformSaasController;
 use App\Modules\Saas\Http\Controllers\TenantSaasController;
+use App\Modules\Recruitment\Http\Controllers\CandidateImportController;
+use App\Modules\Recruitment\Http\Controllers\CareersController;
 use App\Modules\Recruitment\Http\Controllers\RecruitmentController;
 use App\Modules\Platform\Http\Controllers\HealthController;
 use App\Modules\Platform\Http\Controllers\ReadinessController;
@@ -41,6 +45,26 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/tenant-domain', TenantDomainController::class);
     Route::post('/integrations/biometric/punches', [AdvancedController::class, 'biometric'])->middleware('throttle:biometric');
     Route::get('/document-verifications/{token}', [DocumentEngineController::class, 'verify']);
+    Route::get('/careers', [CareersController::class, 'index'])->middleware('throttle:careers');
+    Route::get('/careers/companies/{slug}', [CareersController::class, 'company'])->middleware('throttle:careers');
+    Route::get('/careers/companies/{slug}/logo', [CareersController::class, 'logo']);
+    Route::get('/careers/jobs/{slug}', [CareersController::class, 'show'])->middleware('throttle:careers');
+    Route::post('/careers/jobs/{slug}/apply', [CareersController::class, 'apply'])->middleware('throttle:careers');
+    Route::prefix('/candidate')->group(function (): void {
+        Route::get('/auth/methods', [CandidateAccountController::class, 'methods']);
+        Route::get('/auth/{provider}/redirect', [CandidateAccountController::class, 'redirect'])->middleware('throttle:candidate-auth');
+        Route::post('/auth/{provider}/callback', [CandidateAccountController::class, 'callback'])->middleware('throttle:candidate-auth');
+        Route::post('/auth/code', [CandidateAccountController::class, 'sendCode'])->middleware('throttle:candidate-code');
+        Route::post('/auth/code/verify', [CandidateAccountController::class, 'verifyCode'])->middleware('throttle:candidate-auth');
+        Route::post('/auth/register', [CandidateAccountController::class, 'register'])->middleware('throttle:candidate-auth');
+        Route::post('/auth/password', [CandidateAccountController::class, 'passwordLogin'])->middleware('throttle:candidate-auth');
+        Route::middleware(AuthenticateCandidate::class)->group(function (): void {
+            Route::get('/me', [CandidateAccountController::class, 'me']);
+            Route::put('/me', [CandidateAccountController::class, 'update']);
+            Route::get('/me/applications', [CandidateAccountController::class, 'applications']);
+            Route::post('/logout', [CandidateAccountController::class, 'logout']);
+        });
+    });
 
     Route::middleware('web')->group(function (): void {
         Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:auth');
@@ -81,6 +105,7 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/brands/{brand}', [BrandController::class, 'update']);
             Route::get('/legal-entities', [StructureController::class, 'legalEntities']);
             Route::post('/legal-entities', [StructureController::class, 'storeLegalEntity']);
+            Route::patch('/legal-entities/{legalEntity}/employee-code', [StructureController::class, 'updateEmployeeCode']);
             Route::get('/business-units', [StructureController::class, 'businessUnits']);
             Route::post('/business-units', [StructureController::class, 'storeBusinessUnit']);
             Route::get('/branches', [StructureController::class, 'branches']);
@@ -89,12 +114,20 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/branches/{branch}', [StructureController::class, 'destroyBranch']);
             Route::get('/departments', [StructureController::class, 'departments']);
             Route::post('/departments', [StructureController::class, 'storeDepartment']);
+            Route::get('/department-templates', [StructureController::class, 'departmentTemplates']);
+            Route::post('/departments/adopt', [StructureController::class, 'adoptDepartments']);
             Route::patch('/departments/{department}', [StructureController::class, 'updateDepartment']);
             Route::delete('/departments/{department}', [StructureController::class, 'destroyDepartment']);
             Route::get('/designations', [StructureController::class, 'designations']);
             Route::post('/designations', [StructureController::class, 'storeDesignation']);
+            Route::get('/designation-templates', [StructureController::class, 'designationTemplates']);
+            Route::post('/designations/adopt', [StructureController::class, 'adoptDesignations']);
             Route::patch('/designations/{designation}', [StructureController::class, 'updateDesignation']);
             Route::delete('/designations/{designation}', [StructureController::class, 'destroyDesignation']);
+            Route::get('/job-levels', [StructureController::class, 'jobLevels']);
+            Route::get('/job-grades', [StructureController::class, 'jobGrades']);
+            Route::get('/employment-types', [StructureController::class, 'employmentTypes']);
+            Route::post('/reporting-relationships', [StructureController::class, 'storeReporting']);
             Route::get('/payroll/components', [PayrollController::class, 'components']);
             Route::get('/payroll/structures', [PayrollController::class, 'structures']);
             Route::get('/statutory-rules', [PayrollController::class, 'rules']);
@@ -118,9 +151,20 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/payroll/settlements', [PayrollController::class, 'settle']);
             Route::get('/recruitment/requisitions', [RecruitmentController::class, 'requisitions']);
             Route::post('/recruitment/requisitions', [RecruitmentController::class, 'storeRequisition']);
+            Route::get('/recruitment/requisitions/{jobRequisition}', [RecruitmentController::class, 'showRequisition']);
+            Route::post('/recruitment/requisitions/{jobRequisition}/submit', [RecruitmentController::class, 'submitRequisition']);
             Route::post('/recruitment/requisitions/{jobRequisition}/approve', [RecruitmentController::class, 'approveRequisition']);
+            Route::post('/recruitment/requisitions/{jobRequisition}/reject', [RecruitmentController::class, 'rejectRequisition']);
+            Route::post('/recruitment/requisitions/{jobRequisition}/close', [RecruitmentController::class, 'closeRequisition']);
             Route::post('/recruitment/requisitions/{jobRequisition}/openings', [RecruitmentController::class, 'storeOpening']);
             Route::get('/recruitment/openings', [RecruitmentController::class, 'openings']);
+            Route::get('/recruitment/candidate-imports/template', [CandidateImportController::class, 'template']);
+            Route::post('/recruitment/candidate-imports', [CandidateImportController::class, 'store'])->middleware('throttle:candidate-import');
+            Route::get('/recruitment/candidate-imports/{candidateImport}', [CandidateImportController::class, 'show']);
+            Route::put('/recruitment/candidate-imports/{candidateImport}/mapping', [CandidateImportController::class, 'remap'])->middleware('throttle:candidate-import');
+            Route::post('/recruitment/candidate-imports/{candidateImport}/confirm', [CandidateImportController::class, 'confirm'])->middleware('throttle:candidate-import');
+            Route::post('/recruitment/candidate-imports/{candidateImport}/cancel', [CandidateImportController::class, 'cancel']);
+            Route::get('/recruitment/candidate-imports/{candidateImport}/errors', [CandidateImportController::class, 'errors']);
             Route::get('/recruitment/candidates', [RecruitmentController::class, 'candidates']);
             Route::post('/recruitment/candidates', [RecruitmentController::class, 'storeCandidate']);
             Route::post('/recruitment/candidates/{candidate}/resume', [RecruitmentController::class, 'storeResume']);
@@ -130,11 +174,24 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/recruitment/applications/{jobApplication}/stage', [RecruitmentController::class, 'moveApplication']);
             Route::post('/recruitment/applications/{jobApplication}/interviews', [RecruitmentController::class, 'storeInterview']);
             Route::post('/recruitment/interviews/{interview}/feedback', [RecruitmentController::class, 'storeFeedback']);
+            Route::get('/recruitment/offers', [RecruitmentController::class, 'offers']);
             Route::post('/recruitment/offers', [RecruitmentController::class, 'storeOffer']);
+            Route::get('/recruitment/offers/{jobOffer}', [RecruitmentController::class, 'showOffer']);
             Route::post('/recruitment/offers/{jobOffer}/submit', [RecruitmentController::class, 'submitOffer']);
             Route::post('/recruitment/offers/{jobOffer}/approve', [RecruitmentController::class, 'approveOffer']);
+            Route::post('/recruitment/offers/{jobOffer}/reject', [RecruitmentController::class, 'rejectOffer']);
+            Route::post('/recruitment/offers/{jobOffer}/send', [RecruitmentController::class, 'sendOffer']);
             Route::post('/recruitment/offers/{jobOffer}/accept', [RecruitmentController::class, 'acceptOffer']);
+            Route::post('/recruitment/offers/{jobOffer}/decline', [RecruitmentController::class, 'declineOffer']);
             Route::post('/recruitment/offers/{jobOffer}/convert', [RecruitmentController::class, 'convert']);
+            Route::post('/recruitment/openings/{jobOpening}/publish', [CareersController::class, 'publish']);
+            Route::post('/recruitment/openings/{jobOpening}/unpublish', [CareersController::class, 'unpublish']);
+            Route::post('/recruitment/openings/{jobOpening}/close', [CareersController::class, 'close']);
+            Route::get('/recruitment/referrals', [CareersController::class, 'referrals']);
+            Route::post('/recruitment/referral-policies', [CareersController::class, 'savePolicy']);
+            Route::post('/recruitment/referral-rewards/{referralReward}/decision', [CareersController::class, 'decideReward']);
+            Route::get('/me/referrals', [CareersController::class, 'myReferrals']);
+            Route::post('/me/referrals', [CareersController::class, 'storeReferral']);
             Route::get('/kpis', [OperationsController::class, 'kpis']);
             Route::post('/kpis', [OperationsController::class, 'storeKpi']);
             Route::get('/goals', [OperationsController::class, 'goals']);

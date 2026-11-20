@@ -42,6 +42,34 @@ final class SimplePdf
         return $pdf;
     }
 
+    /**
+     * @return list<string>
+     */
+    private static function wrap(string $line): array
+    {
+        $line = trim(str_replace(["\r\n", "\r"], "\n", $line));
+        if ($line === '') {
+            return [''];
+        }
+        $rows = [];
+        foreach (explode("\n", $line) as $paragraph) {
+            $words = preg_split('/\s+/', $paragraph) ?: [];
+            $current = '';
+            foreach ($words as $word) {
+                $next = $current === '' ? $word : $current.' '.$word;
+                if (strlen($next) > 90 && $current !== '') {
+                    $rows[] = $current;
+                    $current = $word;
+                } else {
+                    $current = $next;
+                }
+            }
+            $rows[] = $current;
+        }
+
+        return $rows === [] ? [''] : $rows;
+    }
+
     private static function escape(string $line): string
     {
         $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $line) ?: $line;

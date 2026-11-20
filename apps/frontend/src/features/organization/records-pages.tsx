@@ -19,11 +19,47 @@ type NamedRecord = {
   status?: string
   code?: string
   legal_name?: string
+  employee_code_prefix?: string | null
   employee_code?: string
   given_name?: string
   family_name?: string
   permissions?: string[]
   scope?: string
+}
+
+function EmployeeCodeForm({ entities }: { entities: NamedRecord[] }) {
+  const queryClient = useQueryClient()
+  const notify = useToast().notify
+  const [error, setError] = useState<string | null>(null)
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const body = new FormData(event.currentTarget)
+    setError(null)
+    try {
+      await apiData(`/api/v1/legal-entities/${body.get('legal_entity_id')}/employee-code`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          employee_code_prefix: String(body.get('employee_code_prefix') ?? ''),
+          employee_code_padding: Number(body.get('employee_code_padding') ?? 5),
+        }),
+      })
+      await queryClient.invalidateQueries({ queryKey: ['organization-records'] })
+      notify('Employee ID format saved for this employer.', 'success')
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'The employee ID format could not be saved.')
+    }
+  }
+  return (
+    <form className="grid gap-3 border-t border-border pt-6 sm:grid-cols-3" onSubmit={save}>
+      <h2 className="text-lg font-semibold sm:col-span-3">Employee IDs</h2>
+      <p className="text-sm text-muted-foreground sm:col-span-3">New employees for this legal employer use this prefix. Existing codes stay as they are.</p>
+      <Field label="Legal employer" htmlFor="code-entity"><select id="code-entity" name="legal_entity_id" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" required>{entities.map((entity) => <option key={entity.id} value={entity.id}>{entity.legal_name}</option>)}</select></Field>
+      <Field label="Prefix" htmlFor="code-prefix"><Input id="code-prefix" name="employee_code_prefix" placeholder="RD" required minLength={2} maxLength={8} /></Field>
+      <Field label="Digits" htmlFor="code-pad"><Input id="code-pad" name="employee_code_padding" type="number" min={3} max={8} defaultValue={5} required /></Field>
+      {error ? <p className="text-sm text-destructive sm:col-span-3">{error}</p> : null}
+      <div className="w-fit sm:col-span-3"><Button type="submit">Save employee ID format</Button></div>
+    </form>
+  )
 }
 
 function useOrganizationRecords(path: string, enabled: boolean) {
@@ -46,7 +82,7 @@ export function BusinessesPage() {
   const canManage = permissions.has('organization.manage')
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex max-w-5xl flex-col gap-8">
       <PageHeader
         title="Businesses"
         description="Brands, legal entities, departments, designations, and branches for the active business."
@@ -57,7 +93,8 @@ export function BusinessesPage() {
       ) : (
         <>
           <RecordSection title="Brands" query={brands} columns={['name', 'slug']} />
-          <RecordSection title="Legal entities" query={entities} columns={['legal_name']} />
+          <RecordSection title="Legal entities" query={entities} columns={['legal_name', 'employee_code_prefix']} />
+          {canManage ? <EmployeeCodeForm entities={entities.data ?? []} /> : null}
           <StructureEditor title="Departments" path="/api/v1/departments" query={departments} columns={['name']} enabled={canManage} />
           <StructureEditor title="Designations" path="/api/v1/designations" query={designations} columns={['name']} enabled={canManage} />
           <RecordSection title="Branches" query={branches} columns={['name', 'code']} />
@@ -172,14 +209,14 @@ function DomainPanel() {
   }
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-3 border-t border-border pt-6">
       <h2 className="text-lg font-semibold">Custom domains</h2>
       <p className="text-sm text-muted-foreground">
         A domain selects this business only after the TXT record is verified. The OneFlo login address stays app.oneflo.in.
       </p>
       {domains.isPending ? <Skeleton className="h-16 w-full" /> : null}
       {domains.isError ? <ErrorState title="Domains could not be loaded" description={domains.error instanceof ApiError ? domains.error.message : 'Try again.'} /> : null}
-      {domains.data && domains.data.length === 0 ? <EmptyState title="No custom domains" description="Add hr.example.com after its DNS points at OneFlo." /> : null}
+      {domains.data && domains.data.length === 0 ? <p className="text-sm text-muted-foreground">No custom domain yet. Add one after its DNS points at OneFlo.</p> : null}
       {domains.data && domains.data.length > 0 ? (
         <ul className="flex flex-col gap-3">
           {domains.data.map((domain) => (
@@ -235,20 +272,28 @@ function RecordSection({
   }
 
   if (!query.data || query.data.length === 0) {
-    return <EmptyState title={`No ${title.toLowerCase()}`} description="Records appear here when they exist for the active business." />
+    return (
+      <section className="border-t border-border pt-6">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">None saved for this business.</p>
+      </section>
+    )
   }
 
   return (
-    <DataTable
-      caption={title}
-      rows={query.data}
-      getRowId={(row) => String(row.id)}
-      columns={columns.map((column) => ({
-        id: column,
-        header: column.replaceAll('_', ' '),
-        cell: (row: NamedRecord) => String(row[column] ?? ''),
-      }))}
-    />
+    <section className="border-t border-border pt-6">
+      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+      <DataTable
+        caption={title}
+        rows={query.data}
+        getRowId={(row) => String(row.id)}
+        columns={columns.map((column) => ({
+          id: column,
+          header: column.replaceAll('_', ' '),
+          cell: (row: NamedRecord) => String(row[column] ?? ''),
+        }))}
+      />
+    </section>
   )
 }
 
@@ -278,6 +323,8 @@ function StructureEditor({
       form.reset()
       notify(`${title.slice(0, -1)} saved.`, 'success')
       await queryClient.invalidateQueries({ queryKey: ['organization-records', path] })
+      await queryClient.invalidateQueries({ queryKey: ['departments'] })
+      await queryClient.invalidateQueries({ queryKey: ['designations'] })
     } catch (error) {
       notify(error instanceof ApiError ? error.message : 'The record could not be saved.', 'danger')
     } finally {
@@ -286,8 +333,14 @@ function StructureEditor({
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <RecordSection title={title} query={query} columns={columns} />
+    <section className="flex flex-col gap-3 border-t border-border pt-6">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {query.isPending ? <Skeleton className="h-16 w-full" /> : null}
+      {query.isError ? <ErrorState title={`${title} could not be loaded`} description={query.error instanceof ApiError ? query.error.message : 'Try again.'} /> : null}
+      {query.data && query.data.length === 0 ? <p className="text-sm text-muted-foreground">None saved yet. Add one below, then it appears in People.</p> : null}
+      {query.data && query.data.length > 0 ? (
+        <ul className="text-sm">{query.data.map((row) => <li key={row.id}>{columns.map((column) => String(row[column] ?? '')).filter(Boolean).join(' · ')}</li>)}</ul>
+      ) : null}
       {enabled ? (
         <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => void create(event)}>
           <Field label={`New ${title.slice(0, -1).toLowerCase()}`} htmlFor={`${path}-name`}>
@@ -313,12 +366,12 @@ function OrgChart() {
   })
   if (chart.isPending) return <Skeleton className="h-24 w-full" />
   if (chart.isError) return <ErrorState title="Organization chart could not be loaded" description={chart.error instanceof ApiError ? chart.error.message : 'Try again.'} />
-  if (chart.data.length === 0) return <EmptyState title="No reporting hierarchy" description="Active employees with managers appear on the organization chart." />
+  if (chart.data.length === 0) return <p className="border-t border-border pt-6 text-sm text-muted-foreground">No reporting line yet. Set a manager on an employee in People.</p>
   const ids = new Set(chart.data.map((node) => node.id))
   const roots = chart.data.filter((node) => node.manager_id === null || !ids.has(node.manager_id))
   return (
-    <section>
-      <h2 className="mb-3 text-base font-semibold">Organization chart</h2>
+    <section className="border-t border-border pt-6">
+      <h2 className="mb-3 text-lg font-semibold">Organization chart</h2>
       <ul className="flex flex-col gap-2">
         {roots.map((node) => (
           <ChartBranch key={node.id} node={node} nodes={chart.data} />

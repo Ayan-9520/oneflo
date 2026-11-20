@@ -95,13 +95,13 @@ export function DocumentSettingsPage() {
   }
 
   return (
-    <div>
+    <div className="mx-auto flex max-w-5xl flex-col gap-8">
       <PageHeader
         title="Document settings"
         description="Employer identity, branding, and templates for the selected legal entity."
         crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Documents' }]}
       />
-      <div className="mb-5 max-w-md">
+      <div className="max-w-md">
         <Label htmlFor="legal-entity">Legal entity</Label>
         <Select
           id="legal-entity"
@@ -216,7 +216,7 @@ function ProfilePanel({ entity, canEdit, canBrand }: { entity: LegalEntity; canE
       <TextField label="Professional tax registration" value={form.payroll_pt_number} onChange={(value) => setForm({ ...form, payroll_pt_number: value })} />
       <TextField label="LIN" value={form.payroll_lin} onChange={(value) => setForm({ ...form, payroll_lin: value })} />
       {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}
-      <div className="flex flex-wrap gap-3 md:col-span-2">
+      <div className="flex w-fit flex-wrap gap-3 md:col-span-2">
         <Button type="submit" disabled={!canEdit || save.isPending}>{save.isPending ? 'Saving…' : 'Save profile'}</Button>
         {profile.data && canBrand ? <FileButton label="Upload company stamp" path={`/api/v1/company-profiles/${profile.data.id}/stamp`} /> : null}
       </div>
@@ -257,8 +257,8 @@ function OfficeList({ profile, canEdit, entityId }: { profile: Profile | null; c
   })
 
   return (
-    <section className="md:col-span-2 rounded-lg border border-border p-4">
-      <h2 className="text-base font-semibold">Office addresses</h2>
+    <section className="flex flex-col gap-3 border-t border-border pt-6 md:col-span-2">
+      <h2 className="text-lg font-semibold">Office addresses</h2>
       {profile && profile.offices.length > 0 ? (
         <ul className="mt-3 space-y-2 text-sm">
           {profile.offices.map((office) => (
@@ -277,7 +277,7 @@ function OfficeList({ profile, canEdit, entityId }: { profile: Profile | null; c
         <TextField label="Country" value={country} onChange={setCountry} />
       </div>
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
-      <Button className="mt-3" type="button" variant="outline" disabled={!canEdit || add.isPending} onClick={() => add.mutate()}>
+      <Button className="mt-3 w-fit" type="button" variant="outline" disabled={!canEdit || add.isPending} onClick={() => add.mutate()}>
         {add.isPending ? 'Adding…' : 'Add office'}
       </Button>
     </section>
@@ -310,8 +310,8 @@ function SignatoryList({ profile, canEdit, canBrand, entityId }: { profile: Prof
   })
 
   return (
-    <section className="md:col-span-2 rounded-lg border border-border p-4">
-      <h2 className="text-base font-semibold">Authorized signatories</h2>
+    <section className="flex flex-col gap-3 border-t border-border pt-6 md:col-span-2">
+      <h2 className="text-lg font-semibold">Authorized signatories</h2>
       {profile && profile.signatories.length > 0 ? (
         <ul className="mt-3 space-y-3 text-sm">
           {profile.signatories.map((signatory) => (
@@ -329,7 +329,7 @@ function SignatoryList({ profile, canEdit, canBrand, entityId }: { profile: Prof
         <TextField label="Designation" value={designation} onChange={setDesignation} />
       </div>
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
-      <Button className="mt-3" type="button" variant="outline" disabled={!canEdit || add.isPending} onClick={() => add.mutate()}>
+      <Button className="mt-3 w-fit" type="button" variant="outline" disabled={!canEdit || add.isPending} onClick={() => add.mutate()}>
         {add.isPending ? 'Adding…' : 'Add signatory'}
       </Button>
     </section>
@@ -407,7 +407,7 @@ function BrandingPanel({ entity, canEdit, canManagePlatform }: { entity: LegalEn
         <TextField label="Document header" value={colors.header_text} onChange={(value) => setColors({ ...colors, header_text: value })} />
         <TextField label="Document footer" value={colors.footer_text} onChange={(value) => setColors({ ...colors, footer_text: value })} />
         {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}
-        <div className="flex flex-wrap gap-3 md:col-span-2">
+        <div className="flex w-fit flex-wrap gap-3 md:col-span-2">
           <Button type="submit" disabled={!canEdit || save.isPending}>{save.isPending ? 'Saving…' : 'Save branding'}</Button>
           {canEdit ? (
             <>
@@ -425,8 +425,8 @@ function BrandingPanel({ entity, canEdit, canManagePlatform }: { entity: LegalEn
           </p>
         ) : null}
       </form>
-      <form className="grid gap-4 rounded-lg border border-border p-4" onSubmit={(event) => { event.preventDefault(); savePlatform.mutate() }}>
-        <h2 className="text-base font-semibold">OneFlo attribution</h2>
+      <form className="grid gap-4 border-t border-border pt-6" onSubmit={(event) => { event.preventDefault(); savePlatform.mutate() }}>
+        <h2 className="text-lg font-semibold">OneFlo attribution</h2>
         <p className="text-sm text-muted-foreground">Shown on company letters. Official certificates never include it.</p>
         <TextField label="Powered by text" value={platformForm.powered_by_text} onChange={(value) => setPlatformForm({ ...platformForm, powered_by_text: value })} />
         <TextField label="OneFlo website" value={platformForm.website_url} onChange={(value) => setPlatformForm({ ...platformForm, website_url: value })} />
@@ -435,7 +435,7 @@ function BrandingPanel({ entity, canEdit, canManagePlatform }: { entity: LegalEn
           Show footer branding
         </label>
         {canManagePlatform ? (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-fit flex-wrap gap-3">
             <Button type="submit" disabled={savePlatform.isPending}>{savePlatform.isPending ? 'Saving…' : 'Save OneFlo branding'}</Button>
             <FileButton label="OneFlo logo" path="/api/v1/platform-branding/logo" />
           </div>
@@ -527,7 +527,7 @@ function TemplatePanel({ entity, canGenerate, canPreview }: { entity: LegalEntit
           <p className="text-sm text-muted-foreground">This official certificate keeps the prescribed layout and omits OneFlo attribution.</p>
         ) : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex w-fit flex-wrap gap-3">
           <Button type="submit" variant="outline" disabled={!canPreview || previewMutation.isPending}>
             {previewMutation.isPending ? 'Preparing preview…' : 'Preview'}
           </Button>

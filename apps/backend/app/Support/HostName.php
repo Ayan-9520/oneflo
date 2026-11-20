@@ -37,6 +37,15 @@ final class HostName
     {
         $allowed = config('oneflo.platform_hosts', []);
 
-        return is_array($allowed) && in_array($host, $allowed, true);
+        if (! is_array($allowed)) {
+            return false;
+        }
+        foreach ($allowed as $entry) {
+            if ($entry === $host || (str_starts_with($entry, '*.') && str_ends_with($host, substr($entry, 1)))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -11,5 +11,5 @@ class LegalEntity extends Model
 {
     use BelongsToOrganization;
 
-    protected $fillable = ['brand_id', 'legal_name', 'registration_number'];
+    protected $fillable = ['brand_id', 'legal_name', 'registration_number', 'employee_code_prefix', 'employee_code_padding'];
 }

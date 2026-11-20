@@ -82,14 +82,14 @@ export function AttendancePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex max-w-6xl flex-col gap-8">
       <PageHeader
         title="Attendance"
         description="Today’s count, a punch for a chosen date, and the month marked in colour. A note can be saved on any day. Location is not collected."
         crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Attendance' }]}
       />
-      <section className="rounded-3xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold">Today</h2>
+      <section className="flex flex-col gap-3 border-t border-border pt-6">
+        <h2 className="text-lg font-semibold">Today</h2>
         <p className="mt-1 text-sm text-muted-foreground">Counts for {dayLabel(today)} across this business.</p>
         {summary.isPending ? (
           <Skeleton className="mt-4 h-20 w-full" />
@@ -104,17 +104,17 @@ export function AttendancePage() {
           </dl>
         )}
       </section>
-      <section id="attendance-punch" className="rounded-3xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold">Record a punch</h2>
+      <section id="attendance-punch" className="flex flex-col gap-3 border-t border-border pt-6">
+        <h2 className="text-lg font-semibold">Record a punch</h2>
         <p className="mt-1 text-sm text-muted-foreground">This punch is saved on the employee linked to your login. Choose the date, time, punch type, and work mode.</p>
         <div className="mt-4">
           <PunchForm date={picked} onDate={setPicked} />
         </div>
       </section>
-      <section id="attendance-month" className="rounded-3xl border border-border bg-card p-5">
+      <section id="attendance-month" className="flex flex-col gap-3 border-t border-border pt-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold">Month</h2>
+            <h2 className="text-lg font-semibold">Month</h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">These boxes are for the employee selected here. Click a day to put that date in the punch and to write a note.</p>
           </div>
           <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
@@ -145,8 +145,8 @@ export function AttendancePage() {
       </section>
       {canManage ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <section id="attendance-shifts" className="rounded-3xl border border-border bg-card p-5"><ShiftForm /></section>
-          <section id="attendance-holidays" className="rounded-3xl border border-border bg-card p-5"><HolidayForm /></section>
+          <section id="attendance-shifts" className="border-t border-border pt-6"><ShiftForm /></section>
+          <section id="attendance-holidays" className="border-t border-border pt-6"><HolidayForm /></section>
         </div>
       ) : null}
     </div>
@@ -200,7 +200,7 @@ function PunchForm({ date, onDate }: { date: string; onDate: (value: string) => 
   }
 
   return (
-    <form className="grid gap-3 rounded-lg border border-border bg-card p-4 sm:grid-cols-4" onSubmit={(event) => void submit(event)}>
+    <form className="grid gap-3 sm:grid-cols-4" onSubmit={(event) => void submit(event)}>
       <Field label="Date" htmlFor="punch-date">
         <Input id="punch-date" name="work_date" type="date" required value={date} onChange={(event) => onDate(event.target.value)} />
       </Field>
@@ -214,7 +214,7 @@ function PunchForm({ date, onDate }: { date: string; onDate: (value: string) => 
         <Select id="punch-mode" name="work_mode" options={modes} />
       </Field>
       {error ? <p className="text-sm text-destructive sm:col-span-4">{error}</p> : null}
-      <div className="sm:col-span-4">
+      <div className="w-fit sm:col-span-4">
         <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Record punch'}</Button>
       </div>
     </form>
@@ -284,7 +284,7 @@ function ShiftForm() {
             <label key={value} className="flex items-center gap-1"><input type="checkbox" name="weekly_offs" value={value} defaultChecked={value === '7'} /> {label}</label>
           ))}
         </fieldset>
-        <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Create shift'}</Button>
+        <div className="w-fit sm:col-span-3"><Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Create shift'}</Button></div>
       </form>
       <form
         className="grid gap-3 sm:grid-cols-3"
@@ -301,7 +301,7 @@ function ShiftForm() {
           <Select id="assign-shift" name="shift_id" placeholder="Shift" options={(shifts.data ?? []).map((shift) => ({ value: String(shift.id), label: shift.name }))} />
         </Field>
         <Field label="Effective" htmlFor="assign-date"><Input id="assign-date" name="effective_on" type="date" required /></Field>
-        <Button type="submit" variant="outline" disabled={assign.isPending}>Assign shift</Button>
+        <div className="w-fit sm:col-span-3"><Button type="submit" variant="outline" disabled={assign.isPending}>Assign shift</Button></div>
       </form>
     </section>
   )

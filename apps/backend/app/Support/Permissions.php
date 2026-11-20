@@ -54,6 +54,14 @@ final class Permissions
 
     public const RECRUITMENT_MANAGE = 'recruitment.manage';
 
+    public const RECRUITMENT_REQUISITIONS_APPROVE = 'recruitment.requisitions.approve';
+
+    public const RECRUITMENT_OFFERS_APPROVE = 'recruitment.offers.approve';
+
+    public const RECRUITMENT_JOINING_CONFIRM = 'recruitment.joining.confirm';
+
+    public const RECRUITMENT_REWARDS = 'recruitment.rewards.manage';
+
     public const ONBOARDING_MANAGE = 'onboarding.manage';
 
     public const PERFORMANCE_VIEW = 'performance.view';
@@ -124,9 +132,11 @@ final class Permissions
             self::DOCUMENTS_IDENTITY => 'View sensitive identity documents',
             self::RECRUITMENT_VIEW => 'View recruitment',
             self::RECRUITMENT_MANAGE => 'Manage recruitment',
-            self::ONBOARDING_MANAGE => 'Manage onboarding',
-            self::PERFORMANCE_VIEW => 'View performance',
-            self::PERFORMANCE_MANAGE => 'Manage performance',
+            self::RECRUITMENT_REQUISITIONS_APPROVE => 'Approve or reject job requisitions',
+            self::RECRUITMENT_OFFERS_APPROVE => 'Approve or reject offers',
+            self::RECRUITMENT_JOINING_CONFIRM => 'Confirm a candidate has joined and create the employee',
+            self::RECRUITMENT_REWARDS => 'Configure and decide referral rewards without creating a payment',
+            self::ONBOARDING_MANAGE => 'Manage joining checklists and onboarding documents',
             self::ASSETS_VIEW => 'View assets',
             self::ASSETS_MANAGE => 'Manage assets',
             self::EXPENSES_VIEW => 'View expenses',
@@ -134,6 +144,8 @@ final class Permissions
             self::EXPENSES_APPROVE => 'Approve expenses',
             self::HELPDESK_VIEW => 'View helpdesk tickets',
             self::HELPDESK_MANAGE => 'Manage helpdesk tickets',
+            self::PERFORMANCE_VIEW => 'View performance reviews',
+            self::PERFORMANCE_MANAGE => 'Manage performance reviews',
             self::ENGAGEMENT_VIEW => 'View engagement',
             self::ENGAGEMENT_MANAGE => 'Manage engagement',
             self::NOTIFICATIONS_MANAGE => 'Configure notification providers',

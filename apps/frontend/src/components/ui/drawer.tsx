@@ -38,9 +38,17 @@ export function Drawer({
       ref={ref}
       aria-labelledby={titleId}
       className={cn(
-        'h-dvh max-h-none w-[min(22rem,100%)] border-0 bg-card p-0 text-foreground shadow-[var(--shadow-card)] backdrop:bg-secondary/50',
-        side === 'right' ? 'mr-0 ml-auto' : 'mr-auto ml-0',
+        'hidden h-full max-h-none w-[min(24rem,100%)] border-0 bg-card p-0 text-foreground shadow-xl open:flex open:flex-col backdrop:bg-[#1c1433]/35',
       )}
+      style={{
+        position: 'fixed',
+        inset: 'auto',
+        top: 0,
+        bottom: 0,
+        margin: 0,
+        height: '100%',
+        ...(side === 'right' ? { right: 0, left: 'auto' } : { left: 0, right: 'auto' }),
+      }}
       onClose={onClose}
     >
       <div className="flex h-full flex-col">
