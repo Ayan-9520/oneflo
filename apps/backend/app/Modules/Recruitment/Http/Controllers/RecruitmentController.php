@@ -173,9 +173,17 @@ class RecruitmentController extends Controller
     {
         $this->view($authorization);
 
+        $name = $candidateResume->original_name ?: 'resume.pdf';
+        $type = match (strtolower(pathinfo($name, PATHINFO_EXTENSION))) {
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            default => 'application/octet-stream',
+        };
+
         return response($recruitment->resumeContents($candidateResume), 200, [
-            'Content-Type' => 'application/octet-stream',
-            'Content-Disposition' => 'attachment; filename="'.$candidateResume->original_name.'"',
+            'Content-Type' => $type,
+            'Content-Disposition' => 'attachment; filename="'.str_replace('"', '', $name).'"',
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
@@ -215,6 +223,7 @@ class RecruitmentController extends Controller
                 'stage' => $application->stage,
                 'applied_on' => $application->created_at?->toDateString(),
                 'resume_id' => $resumes->get($application->candidate_id)?->first()?->id,
+                'resume_name' => $resumes->get($application->candidate_id)?->first()?->original_name,
                 'letters' => ($letters->get($application->candidate_id) ?? collect())->map(fn ($document) => [
                     'id' => $document->id,
                     'type' => $document->document_type,

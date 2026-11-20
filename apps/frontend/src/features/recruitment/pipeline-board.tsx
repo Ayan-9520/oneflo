@@ -26,6 +26,7 @@ export type PipelineApplication = {
   stage: string
   applied_on: string | null
   resume_id: number | null
+  resume_name: string | null
   letters: Array<{ id: number; type: string; number: string; issued_on: string }>
   interviews: PipelineInterview[]
   offer: PipelineOffer | null
@@ -187,7 +188,7 @@ function ApplicationPanel({ application, entities, canManage, canApproveOffer, c
         </dl>
         {application.skills ? <p className="text-xs text-muted-foreground">Skills: {application.skills}</p> : null}
         <div className="flex flex-wrap gap-2">
-          {application.resume_id ? <Button variant="outline" onClick={() => void download(`/api/v1/recruitment/resumes/${application.resume_id}`, `resume-${application.id}`).catch(() => setError('The resume could not be downloaded.'))}><FileText className="size-4" />Resume</Button> : null}
+          {application.resume_id ? <Button variant="outline" onClick={() => void download(`/api/v1/recruitment/resumes/${application.resume_id}`, application.resume_name || 'resume.pdf').catch(() => setError('The resume could not be downloaded.'))}><FileText className="size-4" />Resume</Button> : null}
           {offer && application.letters.length === 0 && offer.status !== 'draft' ? <Button variant="outline" onClick={() => void download(`${offerPath}/letter`, `offer-letter-${offer.id}.pdf`).catch(() => setError('The letter could not be downloaded.'))}><Download className="size-4" />Offer letter</Button> : null}
         </div>
         {application.letters.length > 0 ? (
