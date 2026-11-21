@@ -234,8 +234,8 @@ export function SectionTitle({ title, text }: { title: string; text: string }) {
 function HomeIntro() {
   const [phase, setPhase] = useState<'show' | 'leave' | 'done'>('show')
   useEffect(() => {
-    const leave = window.setTimeout(() => setPhase('leave'), 2600)
-    const done = window.setTimeout(() => setPhase('done'), 3200)
+    const leave = window.setTimeout(() => setPhase('leave'), 1600)
+    const done = window.setTimeout(() => setPhase('done'), 2000)
     return () => { window.clearTimeout(leave); window.clearTimeout(done) }
   }, [])
   if (phase === 'done') return null
@@ -246,15 +246,15 @@ function HomeIntro() {
       <div className="pointer-events-none absolute -right-24 bottom-0 size-[28rem] rounded-full bg-[#3a35e0]/40 blur-3xl" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255_/_0.08)_1px,transparent_1px)] [background-size:24px_24px]" />
       <div className="relative flex flex-col items-center text-center text-white">
-        <div className="relative flex size-28 items-center justify-center">
-          <span className="absolute inset-0 animate-spin rounded-full border border-white/15 [animation-duration:3s]" />
-          <span className="absolute inset-2 animate-spin rounded-full border-2 border-transparent border-t-[#ff8fc7] border-r-[#8fb8ff] [animation-duration:1.4s]" />
-          <img src="/images/oneflo-mark.png" alt="" className="h-16 w-auto" />
+        <div className="relative flex h-28 w-72 items-center justify-center">
+          <span className="absolute size-56 rounded-full bg-[radial-gradient(circle,rgb(232_61_154_/_0.28),transparent_68%)] blur-md" />
+          <span className="absolute size-52 animate-spin rounded-full border border-transparent border-t-[#7aa2ff] border-r-[#ff4fd8]/80 [animation-duration:1.6s]" />
+          <img src="/images/oneflo-mark.png" alt="" className="relative z-10 h-20 w-auto drop-shadow-[0_12px_30px_rgb(255_79_216_/_0.35)]" />
         </div>
         <p className="mt-8 text-xs font-semibold uppercase tracking-[0.35em] text-white/60">OneFlo</p>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Real jobs. Real people.</h1>
         <div className="mt-8 h-1 w-52 overflow-hidden rounded-full bg-white/15">
-          <div className="h-full origin-left animate-[oneflo-intro_2.6s_ease-out_forwards] rounded-full bg-gradient-to-r from-[#ff8fc7] via-[#c9a8ff] to-[#8fb8ff]" />
+          <div className="h-full origin-left animate-[oneflo-intro_1.6s_ease-out_forwards] rounded-full bg-gradient-to-r from-[#7aa2ff] via-[#d946ef] to-[#ff4fd8]" />
         </div>
       </div>
       <style>{'@keyframes oneflo-intro{from{transform:scaleX(0)}to{transform:scaleX(1)}}'}</style>
