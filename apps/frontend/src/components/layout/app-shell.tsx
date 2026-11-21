@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useSession } from '@/app/session'
-import { BrandMark } from '@/components/brand-mark'
 import { visibleNavigation } from '@/app/navigation'
 import { Button } from '@/components/ui/button'
 import { Drawer } from '@/components/ui/drawer'
@@ -180,12 +179,9 @@ function SidebarBody({
     <div className="flex h-full flex-col">
       <div className={cn('flex h-16 items-center gap-3 px-4', collapsed && 'justify-center px-2')}>
         {collapsed ? (
-          <span className="text-sm font-extrabold text-white">OF</span>
+          <img src="/images/oneflo-mark.png" alt="OneFlo" className="h-8 w-auto" />
         ) : (
-          <>
-            <BrandMark tone="dark" />
-            <span className="text-[11px] text-sidebar-foreground/70">Every business</span>
-          </>
+          <img src="/images/oneflo-logo.jpg?v=2" alt="OneFlo — From job to workforce" className="h-10 w-auto max-w-full rounded-md bg-white" />
         )}
       </div>
       <nav aria-label="Primary" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4">

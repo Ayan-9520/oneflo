@@ -56,9 +56,8 @@ export function PublicHeader({ overlay = false }: { overlay?: boolean }) {
     <header className={overlay ? 'absolute inset-x-0 top-0 z-40' : 'sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 shadow-[0_8px_30px_rgb(28_20_51_/_0.04)] backdrop-blur-xl'}>
       {!overlay ? <div className="h-0.5 bg-gradient-to-r from-[#3a35e0] via-[#a855f7] to-[#e23d9a]" /> : null}
       <div className={`mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 ${open ? 'bg-white' : ''}`}>
-        <Link to="/home" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-          <span className={`flex size-10 items-center justify-center rounded-xl text-sm font-extrabold ${light ? 'bg-white text-[#3a35e0]' : 'bg-gradient-to-br from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-white'}`}>1F</span>
-          <span className={`text-xl font-extrabold tracking-tight ${light ? 'text-white' : ''}`}>{light ? 'OneFlo' : <><span className="text-[#3a35e0]">One</span><span className="text-[#e23d9a]">Flo</span></>}</span>
+        <Link to="/home" className="flex items-center" onClick={() => setOpen(false)}>
+          <img src="/images/oneflo-logo.jpg?v=2" alt="OneFlo — From job to workforce" className="h-12 w-auto bg-white" />
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
           {navItems.map((item) => <NavLink key={item.label} to={item.to} className={linkClass(item.to)}>{item.label}</NavLink>)}
@@ -106,10 +105,7 @@ export function PublicFooter({ companies = [] }: { companies?: PublicCompany[] }
       <div className="pointer-events-none absolute -left-20 top-10 size-64 rounded-full bg-[#6d38d6]/20 blur-3xl" />
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-5">
         <div className="md:col-span-2">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff3d9a] via-[#6d38d6] to-[#3a35e0] text-xs font-extrabold text-white shadow-lg shadow-[#6d38d6]/30">1F</span>
-            <p className="text-lg font-extrabold text-white">OneFlo</p>
-          </div>
+          <img src="/images/oneflo-logo.jpg?v=2" alt="OneFlo — From job to workforce" className="h-14 w-auto rounded-lg bg-white" />
           <p className="mt-4 max-w-xs text-sm leading-6">Work, people, and careers for every business. Find openings across our businesses in one place.</p>
           {contact ? (
             <ul className="mt-4 space-y-1 text-sm">

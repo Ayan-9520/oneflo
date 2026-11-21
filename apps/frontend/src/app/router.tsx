@@ -57,7 +57,7 @@ function OpeningWorkspace() {
           <span className="absolute inset-0 animate-spin rounded-full bg-[conic-gradient(from_0deg,#ff3d9a,#a855f7,#3a35e0,transparent_70%)] [animation-duration:1.6s]" />
           <span className="absolute inset-[5px] rounded-full bg-[#f7f3ff]" />
           <span className="absolute inset-4 animate-ping rounded-full bg-[#c4b5fd]/30 [animation-duration:2s]" />
-          <span className="relative flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-2xl font-extrabold text-white shadow-[0_18px_40px_rgb(109_56_214_/_0.4)]">1F</span>
+          <img src="/images/oneflo-mark.png" alt="" className="relative h-16 w-auto" />
         </div>
         <div className="mt-8"><BrandMark /></div>
         <h1 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">Welcome back</h1>

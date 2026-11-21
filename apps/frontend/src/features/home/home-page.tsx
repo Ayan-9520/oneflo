@@ -249,7 +249,7 @@ function HomeIntro() {
         <div className="relative flex size-28 items-center justify-center">
           <span className="absolute inset-0 animate-spin rounded-full border border-white/15 [animation-duration:3s]" />
           <span className="absolute inset-2 animate-spin rounded-full border-2 border-transparent border-t-[#ff8fc7] border-r-[#8fb8ff] [animation-duration:1.4s]" />
-          <span className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff3d9a] via-[#6d38d6] to-[#3a35e0] text-xl font-extrabold shadow-[0_16px_40px_rgb(226_61_154_/_0.45)]">1F</span>
+          <img src="/images/oneflo-mark.png" alt="" className="h-16 w-auto" />
         </div>
         <p className="mt-8 text-xs font-semibold uppercase tracking-[0.35em] text-white/60">OneFlo</p>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Real jobs. Real people.</h1>
@@ -498,7 +498,7 @@ export function HomePage() {
           <div className="mx-auto w-full max-w-[300px] rounded-[2.5rem] border-[10px] border-slate-100 bg-white p-4 shadow-[0_30px_60px_rgb(58_53_224_/_0.15)]">
             <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-slate-200" />
             <div className="rounded-2xl bg-[#f6f5fd] p-5">
-              <span className="mx-auto flex size-16 rotate-45 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3a35e0] via-[#6d38d6] to-[#e23d9a]"><span className="-rotate-45 text-lg font-extrabold text-white">1F</span></span>
+              <img src="/images/oneflo-mark.png" alt="" className="mx-auto h-16 w-auto" />
               <p className="mt-6 text-center text-sm font-bold">Candidate sign in</p>
               <div className="mt-4 h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs leading-10 text-slate-400">you@gmail.com</div>
               <div className="mt-3 h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs leading-10 tracking-[0.4em] text-slate-400">••••••</div>
