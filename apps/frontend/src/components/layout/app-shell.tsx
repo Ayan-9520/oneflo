@@ -178,10 +178,12 @@ function SidebarBody({
   return (
     <div className="flex h-full flex-col">
       <div className={cn('flex h-16 items-center gap-3 px-4', collapsed && 'justify-center px-2')}>
-        {collapsed ? (
-          <img src="/images/oneflo-mark.png" alt="OneFlo" className="h-8 w-auto" />
-        ) : (
-          <img src="/images/oneflo-logo.jpg?v=2" alt="OneFlo — From job to workforce" className="h-10 w-auto max-w-full rounded-md bg-white" />
+        <img src="/images/oneflo-mark.png" alt="OneFlo" className="h-8 w-auto shrink-0" />
+        {collapsed ? null : (
+          <span className="min-w-0">
+            <span className="block text-sm font-extrabold leading-none text-white">OneFlo</span>
+            <span className="mt-1 block truncate text-[10px] text-white/70">From job to workforce</span>
+          </span>
         )}
       </div>
       <nav aria-label="Primary" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4">

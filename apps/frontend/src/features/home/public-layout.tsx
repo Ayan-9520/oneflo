@@ -105,7 +105,13 @@ export function PublicFooter({ companies = [] }: { companies?: PublicCompany[] }
       <div className="pointer-events-none absolute -left-20 top-10 size-64 rounded-full bg-[#6d38d6]/20 blur-3xl" />
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-5">
         <div className="md:col-span-2">
-          <img src="/images/oneflo-logo.jpg?v=2" alt="OneFlo — From job to workforce" className="h-14 w-auto rounded-lg bg-white" />
+          <div className="flex items-center gap-3">
+            <img src="/images/oneflo-mark.png" alt="" className="h-10 w-auto" />
+            <span>
+              <span className="block text-lg font-extrabold leading-none text-white">OneFlo</span>
+              <span className="mt-1 block text-xs text-white/70">From job to workforce</span>
+            </span>
+          </div>
           <p className="mt-4 max-w-xs text-sm leading-6">Work, people, and careers for every business. Find openings across our businesses in one place.</p>
           {contact ? (
             <ul className="mt-4 space-y-1 text-sm">
