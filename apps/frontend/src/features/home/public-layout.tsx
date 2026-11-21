@@ -12,7 +12,6 @@ const navItems = [
   { label: 'Categories', to: '/categories' },
   { label: 'Companies', to: '/companies' },
   { label: 'How it works', to: '/how-it-works' },
-  { label: 'For employers', to: '/login' },
 ]
 
 export function useScrollToHash() {
@@ -51,11 +50,11 @@ export function PublicHeader({ overlay = false }: { overlay?: boolean }) {
     if (path === '/careers') return pathname.startsWith('/careers') && !pathname.startsWith('/careers/login') && !pathname.startsWith('/careers/profile')
     return pathname === path && !hash
   }
-  const linkClass = (to: string) => `rounded-lg px-1 py-1 text-sm font-medium transition ${isActive(to) ? (light ? 'text-white' : 'text-[#3a35e0]') : light ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-[#3a35e0]'}`
+  const linkClass = (to: string) => `rounded-full px-3 py-1.5 text-sm font-medium transition ${isActive(to) ? (light ? 'bg-white/15 text-white' : 'bg-[#f3f0ff] text-[#3a35e0]') : light ? 'text-white/80 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-[#f6f5fd] hover:text-[#3a35e0]'}`
 
   return (
-    <header className={overlay ? 'absolute inset-x-0 top-0 z-40' : 'sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur'}>
-      {!overlay ? <div className="h-1 bg-gradient-to-r from-[#2a1878] via-[#7a2cff] to-[#ff2d87]" /> : null}
+    <header className={overlay ? 'absolute inset-x-0 top-0 z-40' : 'sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 shadow-[0_8px_30px_rgb(28_20_51_/_0.04)] backdrop-blur-xl'}>
+      {!overlay ? <div className="h-0.5 bg-gradient-to-r from-[#3a35e0] via-[#a855f7] to-[#e23d9a]" /> : null}
       <div className={`mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 ${open ? 'bg-white' : ''}`}>
         <Link to="/home" className="flex items-center gap-2" onClick={() => setOpen(false)}>
           <span className={`flex size-10 items-center justify-center rounded-xl text-sm font-extrabold ${light ? 'bg-white text-[#3a35e0]' : 'bg-gradient-to-br from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-white'}`}>1F</span>
@@ -69,8 +68,9 @@ export function PublicHeader({ overlay = false }: { overlay?: boolean }) {
             <Link to="/careers/profile" className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${light ? 'bg-white text-[#3a35e0]' : 'bg-[#3a35e0] text-white hover:bg-[#2f2ab8]'}`}><UserRound className="size-4" />{candidate.full_name.split(' ')[0]}</Link>
           ) : (
             <>
-              <Link to="/careers/login" className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold ${light ? 'text-white' : 'text-slate-700 hover:text-[#3a35e0]'}`}><LogIn className="size-4" /> Sign in</Link>
-              <Link to="/careers/login?mode=register" className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${light ? 'bg-white text-[#3a35e0] hover:bg-white/90' : 'bg-gradient-to-r from-[#3a35e0] to-[#6d38d6] text-white hover:opacity-95'}`}><UserRound className="size-4" /> Register today</Link>
+              <Link to="/login" className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-semibold ${light ? 'border-white/30 text-white hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:border-[#c4b5fd] hover:text-[#3a35e0]'}`}><LogIn className="size-3.5" /> Employee login</Link>
+              <Link to="/careers/login" className={`px-2 py-2 text-sm font-semibold ${light ? 'text-white' : 'text-slate-600 hover:text-[#3a35e0]'}`}>Sign in</Link>
+              <Link to="/careers/login?mode=register" className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-md shadow-[#6d38d6]/20 ${light ? 'bg-white text-[#3a35e0] hover:bg-white/90' : 'bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] text-white hover:opacity-95'}`}><UserRound className="size-4" /> Register today</Link>
             </>
           )}
         </div>
@@ -86,8 +86,9 @@ export function PublicHeader({ overlay = false }: { overlay?: boolean }) {
               ? <Link to="/careers/profile" onClick={() => setOpen(false)} className="rounded-xl bg-[#3a35e0] py-3 text-center text-sm font-semibold text-white">My profile</Link>
               : (
                 <>
+                  <Link to="/login" onClick={() => setOpen(false)} className="rounded-xl border border-slate-300 py-3 text-center text-sm font-semibold">Employee login</Link>
                   <Link to="/careers/login" onClick={() => setOpen(false)} className="rounded-xl border border-slate-300 py-3 text-center text-sm font-semibold">Sign in</Link>
-                  <Link to="/careers/login?mode=register" onClick={() => setOpen(false)} className="rounded-xl bg-gradient-to-r from-[#3a35e0] to-[#6d38d6] py-3 text-center text-sm font-semibold text-white">Register today</Link>
+                  <Link to="/careers/login?mode=register" onClick={() => setOpen(false)} className="rounded-xl bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] py-3 text-center text-sm font-semibold text-white">Register today</Link>
                 </>
               )}
           </div>
