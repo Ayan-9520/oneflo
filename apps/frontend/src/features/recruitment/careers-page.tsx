@@ -531,25 +531,23 @@ export function CareerJobPage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(58_53_224_/_0.08)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <Link to="/careers#jobs" className="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3 py-1 text-xs font-semibold text-[#2f2ab8] shadow-sm backdrop-blur hover:bg-white"><ArrowRight className="size-3.5 rotate-180" />All jobs</Link>
-          <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-center">
-            <div className="relative shrink-0">
-              <div className="pointer-events-none absolute -inset-2 rounded-[30px] bg-gradient-to-br from-[#ff8fc7] via-[#c9a8ff] to-[#8fb8ff] opacity-60 blur-lg" />
-              <div className="relative flex h-28 w-52 items-center justify-center rounded-3xl border border-white bg-white px-5 shadow-[0_20px_50px_rgb(109_56_214_/_0.18)]">
-                {row.company_logo ? <img src={row.company_logo} alt={`${row.company} logo`} className="max-h-16 w-full object-contain" /> : <span className="text-3xl font-extrabold text-[#3a35e0]">{row.company.slice(0, 2).toUpperCase()}</span>}
+          <div className="relative mt-5 overflow-hidden rounded-3xl border border-white/80 bg-white/80 p-5 shadow-[0_18px_50px_rgb(58_53_224_/_0.10)] backdrop-blur sm:p-6">
+            <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#ff3d9a] via-[#8b5cf6] to-[#3a35e0]" />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              {row.company_logo ? <img src={row.company_logo} alt={`${row.company} logo`} className="h-11 w-auto max-w-[9.5rem] shrink-0 object-contain object-left" /> : <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#3a35e0] to-[#e23d9a] text-sm font-extrabold text-white">{row.company.slice(0, 2).toUpperCase()}</span>}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link to={`/careers/${row.company_slug}`} className="text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-[#3a35e0]">{row.company}</Link>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Actively hiring</span>
+                </div>
+                <h1 className="mt-1 text-2xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-3xl">{row.title}</h1>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {heroChips.map(([Icon, value]) => <span key={value} className="inline-flex items-center gap-1 rounded-full bg-[#f6f5fd] px-2.5 py-1 text-[11px] font-semibold text-slate-700"><Icon className="size-3.5 text-[#6d38d6]" />{value}</span>)}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f6f5fd] px-2.5 py-1 text-[11px] font-semibold text-slate-700"><CalendarDays className="size-3.5 text-[#6d38d6]" />Posted {formatDate(row.posted_on) ?? 'recently'}</span>
+                </div>
               </div>
+              <a href="#apply" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-5 text-sm font-semibold text-white shadow-lg shadow-[#6d38d6]/25 transition hover:-translate-y-0.5 hover:opacity-95">Apply now <ArrowRight className="size-4" /></a>
             </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link to={`/careers/${row.company_slug}`} className="text-sm font-semibold text-slate-600 hover:text-[#3a35e0]">{row.company}</Link>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Actively hiring</span>
-              </div>
-              <h1 className="mt-2 text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl">{row.title}</h1>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {heroChips.map(([Icon, value]) => <span key={value} className="inline-flex items-center gap-1.5 rounded-full border border-white bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur"><Icon className="size-3.5 text-[#6d38d6]" />{value}</span>)}
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur"><CalendarDays className="size-3.5 text-[#6d38d6]" />Posted {formatDate(row.posted_on) ?? 'recently'}</span>
-              </div>
-            </div>
-            <a href="#apply" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] px-7 text-sm font-semibold text-white shadow-lg shadow-[#6d38d6]/30 transition hover:-translate-y-0.5 hover:opacity-95">Apply now <ArrowRight className="size-4" /></a>
           </div>
         </div>
       </section>
