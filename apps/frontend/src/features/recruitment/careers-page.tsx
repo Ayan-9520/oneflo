@@ -326,30 +326,32 @@ export function CareersPage() {
             <div className="flex items-end justify-between gap-4">
               <div><h2 className="text-2xl font-bold tracking-tight">Our companies</h2><p className="mt-1 text-sm text-slate-600">Each business hires under its own name.</p></div>
             </div>
-            {listing.isPending ? <div className="mt-6 grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">{[1, 2, 3, 4, 5].map((key) => <div key={key} className="h-60 animate-pulse rounded-3xl bg-white" />)}</div> : companies.length === 0 ? <p className="mt-6 text-sm text-slate-600">Companies appear here once they are set up in OneFlo.</p> : (
-              <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                {companies.map((row) => (
-                  <Link key={row.slug} to={`/careers/${row.slug}`} className="group relative rounded-3xl bg-gradient-to-br from-[#ffc2e2] via-[#e2d4ff] to-[#bcd5ff] p-px shadow-[0_10px_30px_rgb(109_56_214_/_0.08)] transition duration-300 hover:-translate-y-1.5 hover:from-[#ff3d9a] hover:via-[#a855f7] hover:to-[#3a35e0] hover:shadow-[0_24px_50px_rgb(109_56_214_/_0.25)]">
-                    <article className="relative flex h-full flex-col items-center overflow-hidden rounded-[23px] bg-white px-4 pb-5 pt-6 text-center">
-                      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-[#ffe4f2] via-[#f3ecff] to-[#e3edff] opacity-80" />
-                      <div className="relative flex h-20 w-full items-center justify-center rounded-2xl border border-white bg-white px-3 shadow-[0_8px_24px_rgb(15_23_42_/_0.08)] transition duration-300 group-hover:scale-105">
-                        {row.logo_url
-                          ? <img src={row.logo_url} alt={`${row.name} logo`} className="max-h-14 w-full object-contain" />
-                          : <span className="text-2xl font-extrabold text-[#3a35e0]">{row.name.slice(0, 2).toUpperCase()}</span>}
-                      </div>
-                      <h3 className="relative mt-5 text-lg font-bold text-slate-900">{row.name}</h3>
-                      {row.industry ? <p className="relative mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{row.industry}</p> : null}
-                      <span className={`relative mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${row.jobs > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+            {listing.isPending ? <div className="mt-6 grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">{[1, 2, 3, 4, 5].map((key) => <div key={key} className="h-40 animate-pulse rounded-2xl bg-white" />)}</div> : companies.length === 0 ? <p className="mt-6 text-sm text-slate-600">Companies appear here once they are set up in OneFlo.</p> : (
+              <>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                {companies.map((row, index) => {
+                  const accent = ['from-[#3a35e0] to-[#6d38d6]', 'from-[#0f766e] to-[#2dd4bf]', 'from-[#c2410c] to-[#fb923c]', 'from-[#be185d] to-[#e879f9]', 'from-[#1d4ed8] to-[#38bdf8]'][index % 5]
+                  return (
+                    <Link key={row.slug} to={`/careers/${row.slug}`} style={{ animationDelay: `${index * 60}ms` }} className="group relative flex animate-[oneflo-card_0.55s_ease_both] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-[0_8px_24px_rgb(28_20_51_/_0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgb(58_53_224_/_0.14)]">
+                      <span className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${accent}`} />
+                      <span className={`pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-gradient-to-br ${accent} opacity-20 blur-2xl transition duration-500 group-hover:opacity-40`} />
+                      {row.logo_url
+                        ? <img src={row.logo_url} alt={`${row.name} logo`} className="h-10 w-auto max-w-[8.5rem] object-contain object-left" />
+                        : <span className={`flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${accent} text-xs font-extrabold text-white`}>{row.name.slice(0, 2).toUpperCase()}</span>}
+                      <h3 className="mt-3 text-sm font-bold text-slate-900">{row.name}</h3>
+                      {row.industry ? <p className="mt-0.5 text-[11px] font-medium text-slate-500">{row.industry}</p> : null}
+                      <span className={`mt-2 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${row.jobs > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         <span className={`size-1.5 rounded-full ${row.jobs > 0 ? 'bg-emerald-500' : 'bg-slate-400'}`} />{row.jobs} {row.jobs === 1 ? 'open role' : 'open roles'}
                       </span>
-                      <span className="min-h-5 flex-1" />
-                      <span className="relative inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 transition group-hover:border-transparent group-hover:bg-gradient-to-r group-hover:from-[#3a35e0] group-hover:via-[#6d38d6] group-hover:to-[#e23d9a] group-hover:text-white">
-                        View jobs <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
+                      <span className={`mt-3 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-gradient-to-r ${accent} text-xs font-semibold text-white`}>
+                        View jobs <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
                       </span>
-                    </article>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </div>
+              <style>{'@keyframes oneflo-card{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}'}</style>
+              </>
             )}
           </section>
         ) : null}
