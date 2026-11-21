@@ -57,7 +57,7 @@ export function PublicHeader({ overlay = false }: { overlay?: boolean }) {
       {!overlay ? <div className="h-0.5 bg-gradient-to-r from-[#3a35e0] via-[#a855f7] to-[#e23d9a]" /> : null}
       <div className={`mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 ${open ? 'bg-white' : ''}`}>
         <Link to="/home" className="flex items-center" onClick={() => setOpen(false)}>
-          <img src="/images/oneflo-logo.jpg?v=2" alt="OneFlo — From job to workforce" className="h-12 w-auto bg-white" />
+          <img src="/images/oneflo-logo.png" alt="OneFlo — From job to workforce" className="h-12 w-auto" />
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
           {navItems.map((item) => <NavLink key={item.label} to={item.to} className={linkClass(item.to)}>{item.label}</NavLink>)}
