@@ -11,6 +11,11 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { NoticeBoard } from '@/features/workspace/notice-board'
 import { cn } from '@/lib/utils'
 
+function initials(name: string | undefined) {
+  const parts = (name ?? 'A').trim().split(/\s+/).filter(Boolean)
+  return (parts[0]?.[0] ?? 'A').concat(parts.length > 1 ? parts[parts.length - 1][0] : '').toUpperCase()
+}
+
 export function AppShell() {
   const { account, domainLocked, organization, permissions, setOrganizationId, signOut } = useSession()
   const items = visibleNavigation(permissions)
@@ -118,16 +123,25 @@ export function AppShell() {
               <DropdownMenu
                 label="Account menu"
                 trigger={
-                  <span className="inline-flex h-10 max-w-40 items-center truncate rounded-xl border border-border bg-card px-3.5 text-sm font-semibold">
-                    {account?.name ?? 'Account'}
+                  <span title={account?.name ?? 'Account'} className="inline-flex h-10 max-w-64 items-center gap-2 rounded-full border border-border bg-card px-1.5 pr-3 text-sm font-semibold">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3a35e0] to-[#e23d9a] text-[11px] font-bold text-white">{initials(account?.name)}</span>
+                    <span className="truncate">{account?.name ?? 'Account'}</span>
                   </span>
                 }
+                header={
+                  <div className="mb-1 border-b border-border px-3 py-2.5">
+                    <p className="text-sm font-semibold text-foreground">{account?.name ?? 'Account'}</p>
+                    <p className="truncate text-xs text-muted-foreground">{account?.email}</p>
+                  </div>
+                }
                 items={[
-                  { id: 'help', label: 'Help center', onSelect: () => void navigate('/help') },
-                  { id: 'design', label: 'Design system', onSelect: () => void navigate('/design-system') },
+                  { id: 'help', label: 'Help center', hint: 'How this workspace is organized', onSelect: () => void navigate('/help') },
+                  { id: 'design', label: 'Design system', hint: 'Interface components', onSelect: () => void navigate('/design-system') },
                   {
                     id: 'logout',
                     label: 'Sign out',
+                    hint: 'Leave this account on this device',
+                    tone: 'danger',
                     onSelect: () => {
                       void signOut().then(() => navigate('/login'))
                     },
