@@ -515,14 +515,22 @@ export function HomePage() {
         <div className="mt-12 text-center"><Link to="/how-it-works" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-6 py-3 text-sm font-semibold hover:border-[#3a35e0] hover:text-[#3a35e0]">See how it works <ArrowRight className="size-4" /></Link></div>
       </section>
 
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#3a35e0] via-[#6d38d6] to-[#e23d9a] py-16 text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255_/_0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Are You Already Working With Us?</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-white/85">Employees, managers, and HR sign in to OneFlo for attendance, leave, payslips, approvals, and employee referrals.</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link to="/login" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#3a35e0] hover:bg-white/90"><LogIn className="size-4" /> Employee login</Link>
-            <Link to="/careers" className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-6 py-3 text-sm font-semibold hover:bg-white/10">Browse jobs <ArrowRight className="size-4" /></Link>
+      <section className="relative overflow-hidden bg-[#120b2e] py-16 text-white">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#3a35e0]/80 via-[#6d38d6]/60 to-[#e23d9a]/80" />
+        <div className="pointer-events-none absolute -left-16 top-0 size-72 rounded-full bg-[#ff8fc7]/30 blur-3xl" />
+        <div className="pointer-events-none absolute -right-10 bottom-0 size-72 rounded-full bg-[#8fb8ff]/30 blur-3xl" />
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="overflow-hidden rounded-[28px] border border-white/20 bg-white/10 px-6 py-10 text-center shadow-[0_30px_80px_rgb(8_4_30_/_0.35)] backdrop-blur sm:px-12">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/70">For employees</p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Are You Already Working With Us?</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">Employees, managers, and HR sign in to OneFlo for attendance, leave, payslips, approvals, and employee referrals.</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {['Attendance', 'Leave', 'Payslips', 'Approvals', 'Referrals'].map((item) => <span key={item} className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold">{item}</span>)}
+            </div>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <Link to="/login" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#3a35e0] shadow-lg shadow-black/10 transition hover:-translate-y-0.5"><LogIn className="size-4" /> Employee login</Link>
+              <Link to="/careers" className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">Browse jobs <ArrowRight className="size-4" /></Link>
+            </div>
           </div>
         </div>
       </section>

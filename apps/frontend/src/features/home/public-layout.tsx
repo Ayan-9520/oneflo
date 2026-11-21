@@ -100,11 +100,16 @@ export function PublicHeader({ overlay = false }: { overlay?: boolean }) {
 export function PublicFooter({ companies = [] }: { companies?: PublicCompany[] }) {
   const contact = companies.find((company) => company.contact_email || company.contact_phone)
   return (
-    <footer id="contact" className="bg-[#120d3a] text-slate-400">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-5">
+    <footer id="contact" className="relative overflow-hidden bg-[#0c0824] text-slate-400">
+      <div className="h-1 bg-gradient-to-r from-[#ff3d9a] via-[#8b5cf6] to-[#3a35e0]" />
+      <div className="pointer-events-none absolute -left-20 top-10 size-64 rounded-full bg-[#6d38d6]/20 blur-3xl" />
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-5">
         <div className="md:col-span-2">
-          <p className="text-xl font-extrabold text-white">OneFlo</p>
-          <p className="mt-3 max-w-xs text-sm leading-6">Work, people, and careers for every business. Find openings across our businesses in one place.</p>
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff3d9a] via-[#6d38d6] to-[#3a35e0] text-xs font-extrabold text-white shadow-lg shadow-[#6d38d6]/30">1F</span>
+            <p className="text-lg font-extrabold text-white">OneFlo</p>
+          </div>
+          <p className="mt-4 max-w-xs text-sm leading-6">Work, people, and careers for every business. Find openings across our businesses in one place.</p>
           {contact ? (
             <ul className="mt-4 space-y-1 text-sm">
               {contact.contact_email ? <li><a href={`mailto:${contact.contact_email}`} className="hover:text-white">{contact.contact_email}</a></li> : null}
@@ -113,7 +118,7 @@ export function PublicFooter({ companies = [] }: { companies?: PublicCompany[] }
           ) : null}
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">For candidates</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white">For candidates</p>
           <ul className="mt-3 space-y-2 text-sm">
             <li><Link to="/careers" className="hover:text-white">Browse jobs</Link></li>
             <li><Link to="/careers/login?mode=register" className="hover:text-white">Create profile</Link></li>
@@ -121,11 +126,11 @@ export function PublicFooter({ companies = [] }: { companies?: PublicCompany[] }
           </ul>
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">Businesses</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white">Businesses</p>
           <ul className="mt-3 space-y-2 text-sm">{companies.map((company) => <li key={company.slug}><Link to={`/careers/${company.slug}`} className="hover:text-white">{company.name}</Link></li>)}</ul>
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">For employers</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white">For employers</p>
           <ul className="mt-3 space-y-2 text-sm">
             <li><Link to="/login" className="hover:text-white">Employee login</Link></li>
             <li><Link to="/careers#privacy" className="hover:text-white">Privacy policy</Link></li>
@@ -133,7 +138,12 @@ export function PublicFooter({ companies = [] }: { companies?: PublicCompany[] }
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs">© {new Date().getFullYear()} OneFlo</div>
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p>© {new Date().getFullYear()} OneFlo</p>
+          <p className="text-white/50">Careers, people, and work in one place</p>
+        </div>
+      </div>
     </footer>
   )
 }
