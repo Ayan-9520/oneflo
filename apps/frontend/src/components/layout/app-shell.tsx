@@ -24,6 +24,7 @@ export function AppShell() {
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -143,7 +144,10 @@ export function AppShell() {
                     hint: 'Leave this account on this device',
                     tone: 'danger',
                     onSelect: () => {
-                      void signOut().then(() => navigate('/login'))
+                      setSigningOut(true)
+                      void signOut()
+                        .then(() => navigate('/login'))
+                        .catch(() => setSigningOut(false))
                     },
                   },
                 ]}
@@ -173,6 +177,19 @@ export function AppShell() {
           ))}
         </nav>
       </Drawer>
+      {signingOut ? (
+        <div role="status" aria-live="polite" className="fixed inset-0 z-[90] flex items-center justify-center bg-[#120b2e]/80 px-6 text-white backdrop-blur-md">
+          <div className="flex w-full max-w-sm flex-col items-center rounded-3xl border border-white/15 bg-white/10 px-8 py-10 text-center shadow-[0_30px_80px_rgb(8_4_30_/_0.45)]">
+            <img src="/images/oneflo-mark.png" alt="" className="h-14 w-auto animate-pulse" />
+            <p className="mt-5 text-lg font-extrabold">Signing out</p>
+            <p className="mt-1 text-sm text-white/70">{account?.name ? `${account.name} is leaving this device.` : 'Closing this session.'}</p>
+            <div className="mt-6 h-1 w-40 overflow-hidden rounded-full bg-white/15">
+              <div className="h-full w-1/2 animate-[oneflo-signout_1.1s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-[#7aa2ff] to-[#ff4fd8]" />
+            </div>
+          </div>
+          <style>{'@keyframes oneflo-signout{0%{transform:translateX(-120%)}100%{transform:translateX(280%)}}'}</style>
+        </div>
+      ) : null}
       <Drawer open={notificationsOpen} title="Notifications" onClose={() => setNotificationsOpen(false)}>
         <NotificationList open={notificationsOpen} />
       </Drawer>
