@@ -192,6 +192,7 @@ export const categoryIcons: Record<string, LucideIcon> = {
   'Business Development': Handshake,
   Other: LayoutGrid,
 }
+const cardAccents = ['from-[#3a35e0] to-[#6d38d6]', 'from-[#0f766e] to-[#2dd4bf]', 'from-[#c2410c] to-[#fb923c]', 'from-[#be185d] to-[#e879f9]']
 const typeLabels: Record<string, string> = { full_time: 'Full time', part_time: 'Part time', contract: 'Contract', intern: 'Internship' }
 const typeStyles: Record<string, string> = { full_time: 'bg-emerald-50 text-emerald-700', part_time: 'bg-violet-50 text-violet-700', contract: 'bg-sky-50 text-sky-700', intern: 'bg-rose-50 text-rose-700' }
 
@@ -428,29 +429,36 @@ export function HomePage() {
             <p className="mt-2 text-sm text-slate-600">New opportunities are coming soon. Please check back later.</p>
           </div>
         ) : (
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {jobs.map((job) => (
-              <Link key={job.slug} to={`/careers/jobs/${job.slug}`} className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-5 text-center transition hover:-translate-y-1 hover:border-[#a5a2f2] hover:shadow-[0_20px_40px_rgb(58_53_224_/_0.12)]">
-                <div className="flex items-start justify-between gap-2 text-left">
-                  {job.category ? <span className="rounded-md bg-[#eeedfc] px-2 py-1 text-[11px] font-semibold text-[#3a35e0]">{job.category}</span> : <span />}
-                  {job.employment_type ? <span className={`rounded-md px-2 py-1 text-[11px] font-semibold ${typeStyles[job.employment_type] ?? 'bg-slate-100 text-slate-700'}`}>{typeLabels[job.employment_type] ?? job.employment_type}</span> : null}
-                </div>
-                <div className="mx-auto mt-5"><Logo name={job.company} src={job.company_logo} size="size-16" /></div>
-                <h3 className="mt-4 text-lg font-bold group-hover:text-[#3a35e0]">{job.title}</h3>
-                <p className="mt-1 text-sm text-slate-500">{job.company}</p>
-                {job.department ? <span className="mx-auto mt-2 inline-flex items-center gap-1 rounded-full bg-[#f6f5fd] px-2.5 py-1 text-[11px] font-semibold text-[#6d38d6]"><Briefcase className="size-3" />{job.department}</span> : null}
-                <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                  {job.location ? <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{job.location}</span> : null}
-                  {experience(job) ? <span>{experience(job)}</span> : null}
-                </p>
-                <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4 text-left">
-                  <span className="text-sm font-bold">{job.salary_note ?? 'Salary on discussion'}</span>
-                  <span className="rounded-full bg-[#3a35e0] px-3 py-1 text-xs font-semibold text-white">{job.headcount ? `${job.headcount} open` : 'Apply'}</span>
-                </div>
-              </Link>
-            ))}
+          <>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {jobs.map((job, index) => {
+              const accent = cardAccents[index % cardAccents.length]
+              return (
+                <Link key={job.slug} to={`/careers/jobs/${job.slug}`} style={{ animationDelay: `${index * 60}ms` }} className="group relative flex animate-[oneflo-card_0.55s_ease_both] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_8px_24px_rgb(28_20_51_/_0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgb(58_53_224_/_0.14)]">
+                  <span className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${accent}`} />
+                  <span className={`pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-gradient-to-br ${accent} opacity-20 blur-2xl transition duration-500 group-hover:opacity-40`} />
+                  <div className="flex items-center gap-2">
+                    {job.company_logo ? <img src={job.company_logo} alt="" className="h-8 w-14 shrink-0 object-contain" /> : <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${accent} text-[10px] font-extrabold text-white`}>{job.company.slice(0, 2).toUpperCase()}</span>}
+                    <p className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-500">{job.company}</p>
+                    {job.employment_type ? <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyles[job.employment_type] ?? 'bg-slate-100 text-slate-700'}`}>{typeLabels[job.employment_type] ?? job.employment_type}</span> : null}
+                  </div>
+                  <h3 className="mt-2 line-clamp-2 text-sm font-bold leading-snug group-hover:text-[#3a35e0]">{job.title}</h3>
+                  <p className="mt-1.5 flex flex-wrap gap-1 text-[11px] text-slate-500">
+                    {job.category ? <span className="rounded-full bg-[#f6f5fd] px-2 py-0.5 font-medium text-[#6d38d6]">{job.category}</span> : null}
+                    {job.location ? <span className="inline-flex items-center gap-0.5"><MapPin className="size-3" />{job.location}</span> : null}
+                    {experience(job) ? <span>{experience(job)}</span> : null}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2">
+                    <span className="text-xs font-bold text-slate-800">{job.salary_note ?? 'Salary on discussion'}</span>
+                    <span className={`rounded-full bg-gradient-to-r ${accent} px-2 py-0.5 text-[10px] font-semibold text-white`}>{job.headcount ? `${job.headcount} open` : 'Apply'}</span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
+          </>
         )}
+        <style>{'@keyframes oneflo-card{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}'}</style>
         <div className="mt-10 text-center"><Link to="/careers#jobs" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-6 py-3 text-sm font-semibold hover:border-[#3a35e0] hover:text-[#3a35e0]">View all jobs <ArrowRight className="size-4" /></Link></div>
       </section>
 
