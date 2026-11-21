@@ -52,6 +52,9 @@ type Job = {
   salary_note: string | null
   headcount: number | null
   posted_on: string | null
+  designation: string | null
+  summary: string | null
+  skills: string | null
 }
 export type Listing = {
   companies: Array<{ name: string; slug: string; logo_url: string | null; jobs: number }>
@@ -438,16 +441,19 @@ export function HomePage() {
                   <span className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${accent}`} />
                   <span className={`pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-gradient-to-br ${accent} opacity-20 blur-2xl transition duration-500 group-hover:opacity-40`} />
                   <div className="flex items-center gap-2">
-                    {job.company_logo ? <img src={job.company_logo} alt="" className="h-8 w-14 shrink-0 object-contain" /> : <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${accent} text-[10px] font-extrabold text-white`}>{job.company.slice(0, 2).toUpperCase()}</span>}
-                    <p className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-500">{job.company}</p>
-                    {job.employment_type ? <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyles[job.employment_type] ?? 'bg-slate-100 text-slate-700'}`}>{typeLabels[job.employment_type] ?? job.employment_type}</span> : null}
+                    {job.company_logo ? <img src={job.company_logo} alt={job.company} className="h-8 w-16 shrink-0 object-contain object-left" /> : <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${accent} text-[10px] font-extrabold text-white`}>{job.company.slice(0, 2).toUpperCase()}</span>}
+                    {job.employment_type ? <span className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyles[job.employment_type] ?? 'bg-slate-100 text-slate-700'}`}>{typeLabels[job.employment_type] ?? job.employment_type}</span> : null}
                   </div>
                   <h3 className="mt-2 line-clamp-2 text-sm font-bold leading-snug group-hover:text-[#3a35e0]">{job.title}</h3>
+                  {job.department && job.department !== job.category ? <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{job.department}</p> : null}
                   <p className="mt-1.5 flex flex-wrap gap-1 text-[11px] text-slate-500">
                     {job.category ? <span className="rounded-full bg-[#f6f5fd] px-2 py-0.5 font-medium text-[#6d38d6]">{job.category}</span> : null}
                     {job.location ? <span className="inline-flex items-center gap-0.5"><MapPin className="size-3" />{job.location}</span> : null}
                     {experience(job) ? <span>{experience(job)}</span> : null}
+                    {(job.skills ?? '').split(/[,\n]/).map((skill) => skill.trim()).filter(Boolean).slice(0, 2).map((skill) => <span key={skill} className="rounded-full border border-[#e4dcff] px-2 py-0.5 font-medium text-[#5b2fc9]">{skill}</span>)}
                   </p>
+                  {job.summary ? <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-slate-500">{job.summary}</p> : null}
+                  {job.posted_on ? <p className="mt-1 text-[10px] text-slate-400">Posted {new Date(job.posted_on).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p> : null}
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2">
                     <span className="text-xs font-bold text-slate-800">{job.salary_note ?? 'Salary on discussion'}</span>
                     <span className={`rounded-full bg-gradient-to-r ${accent} px-2 py-0.5 text-[10px] font-semibold text-white`}>{job.headcount ? `${job.headcount} open` : 'Apply'}</span>
