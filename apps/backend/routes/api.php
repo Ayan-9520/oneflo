@@ -182,6 +182,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/recruitment/candidates', [RecruitmentController::class, 'storeCandidate']);
             Route::post('/recruitment/candidates/{candidate}/resume', [RecruitmentController::class, 'storeResume']);
             Route::get('/recruitment/resumes/{candidateResume}', [RecruitmentController::class, 'resume']);
+            Route::get('/site-visitors', [CareersController::class, 'visitors']);
             Route::get('/recruitment/applications', [RecruitmentController::class, 'applications']);
             Route::post('/recruitment/applications', [RecruitmentController::class, 'storeApplication']);
             Route::post('/recruitment/applications/{jobApplication}/stage', [RecruitmentController::class, 'moveApplication']);

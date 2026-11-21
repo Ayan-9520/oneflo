@@ -38,6 +38,21 @@ class CareersController extends Controller
         return ApiResponse::data(['saved' => $filled !== []]);
     }
 
+    public function visitors(Request $request, AuthorizationService $authorization): JsonResponse
+    {
+        $authorization->authorizePermission($request->user(), 'recruitment.view');
+        $rows = \App\Models\SiteVisitor::query()->latest()->limit(200)->get(['id', 'name', 'phone', 'email', 'location', 'created_at']);
+
+        return ApiResponse::data($rows->map(fn ($row) => [
+            'id' => $row->id,
+            'name' => $row->name,
+            'phone' => $row->phone,
+            'email' => $row->email,
+            'location' => $row->location,
+            'created_at' => $row->created_at?->toIso8601String(),
+        ])->all());
+    }
+
     public function index(Request $request, CareersService $careers): JsonResponse
     {
         return ApiResponse::data([

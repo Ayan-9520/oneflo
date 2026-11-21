@@ -15,6 +15,7 @@ import {
   Shield,
   Users,
   UserPlus,
+  UserRound,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -125,6 +126,14 @@ export const navigation: readonly NavItem[] = [
     to: '/recruitment',
     description: 'Requisitions, candidates, interviews, and offers for the active business.',
     icon: Briefcase,
+    access: ['recruitment.view'],
+  },
+  {
+    id: 'visitors',
+    label: 'Visitors',
+    to: '/visitors',
+    description: 'People who left their contact details on the public home page.',
+    icon: UserRound,
     access: ['recruitment.view'],
   },
   {

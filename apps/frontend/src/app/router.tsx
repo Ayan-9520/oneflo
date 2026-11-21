@@ -23,6 +23,7 @@ import { CandidateLoginPage } from '@/features/recruitment/candidate-auth-page'
 import { CareerJobPage, CareersPage } from '@/features/recruitment/careers-page'
 import { OfferResponsePage } from '@/features/recruitment/offer-response-page'
 import { RecruitmentPage } from '@/features/recruitment/recruitment-page'
+import { VisitorsPage } from '@/features/recruitment/visitors-page'
 import { LetterStudioPage } from '@/features/recruitment/letter-studio-page'
 import { DocumentSettingsPage } from '@/features/documents/document-settings-page'
 import { HelpPage } from '@/features/workspace/help-page'
@@ -36,7 +37,7 @@ import { BrandMark } from '@/components/brand-mark'
 import { HomePage } from '@/features/home/home-page'
 import { CategoriesPage, CompaniesPage, HowItWorksPage } from '@/features/home/public-pages'
 
-const dedicated = new Set(['/', '/help', '/design-system', '/businesses', '/master-data', '/people', '/team', '/access', '/documents', '/attendance', '/leave', '/approvals', '/payroll', '/recruitment', '/letters', '/onboarding', '/performance', '/assets', '/expenses', '/helpdesk', '/engagement', '/my-work', '/manager', '/reports', '/platform'])
+const dedicated = new Set(['/', '/help', '/design-system', '/businesses', '/master-data', '/people', '/team', '/access', '/documents', '/attendance', '/leave', '/approvals', '/payroll', '/recruitment', '/visitors', '/letters', '/onboarding', '/performance', '/assets', '/expenses', '/helpdesk', '/engagement', '/my-work', '/manager', '/reports', '/platform'])
 
 const moduleRoutes = navigation
   .filter((item) => !dedicated.has(item.to))
@@ -127,6 +128,7 @@ const router = createBrowserRouter([
       { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'payroll', element: <PayrollPage /> },
       { path: 'recruitment', element: <RecruitmentPage /> },
+      { path: 'visitors', element: <VisitorsPage /> },
       { path: 'letters', element: <LetterStudioPage /> },
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'performance', element: <PerformancePage /> },
