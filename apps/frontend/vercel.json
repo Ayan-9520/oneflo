@@ -4,9 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://passion-columnists-convenient-las.trycloudflare.com/api/:path*" },
-    { "source": "/sanctum/:path*", "destination": "https://passion-columnists-convenient-las.trycloudflare.com/sanctum/:path*" },
-    { "source": "/storage/:path*", "destination": "https://passion-columnists-convenient-las.trycloudflare.com/storage/:path*" },
+    { "source": "/api/:path*", "destination": "https://andreas-consultation-designs-peter.trycloudflare.com/api/:path*" },
+    { "source": "/sanctum/:path*", "destination": "https://andreas-consultation-designs-peter.trycloudflare.com/sanctum/:path*" },
+    { "source": "/storage/:path*", "destination": "https://andreas-consultation-designs-peter.trycloudflare.com/storage/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
