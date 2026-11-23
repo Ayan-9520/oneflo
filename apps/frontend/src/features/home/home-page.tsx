@@ -474,23 +474,33 @@ export function HomePage() {
         <section className="bg-[#f7f5ff] py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionTitle title="People open to work" text="Public profiles. Connect if you need them for a role. Their letters, salary, and phone stay private." />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {(people.data ?? []).map((person) => (
-                <article key={person.slug} className="flex flex-col rounded-2xl border border-white bg-white p-5 shadow-[0_10px_30px_rgb(109_56_214_/_0.08)]">
-                  <div className="flex items-center gap-3">
-                    {person.avatar_url ? <img src={person.avatar_url} alt="" className="size-12 rounded-full object-cover" /> : <span className="flex size-12 items-center justify-center rounded-full bg-[#efeaff] text-lg font-extrabold text-[#3a35e0]">{person.full_name.slice(0, 1)}</span>}
-                    <div className="min-w-0">
-                      <Link to={`/in/${person.slug}`} className="block truncate text-base font-extrabold text-slate-950 hover:text-[#3a35e0]">{person.full_name}</Link>
-                      <p className="truncate text-sm text-slate-500">{person.headline || person.location || 'OneFlo profile'}</p>
+            <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(people.data ?? []).map((person, index) => {
+                const accent = cardAccents[index % cardAccents.length]
+                const listed = (person.skills ?? '').split(/[,|\n]/).map((skill) => skill.trim()).filter(Boolean)
+                const chips = (listed.length > 1 ? listed : (person.skills ?? '').split(/\s+/).filter((skill) => skill.length > 1)).slice(0, 6)
+                return (
+                  <article key={person.slug} className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_rgb(28_20_51_/_0.06)]">
+                    <span className={`-mx-5 -mt-5 mb-4 h-1.5 bg-gradient-to-r ${accent}`} />
+                    <div className="flex items-center gap-3">
+                      {person.avatar_url
+                        ? <img src={person.avatar_url} alt="" className="size-14 rounded-2xl object-cover ring-2 ring-white" />
+                        : <span className={`flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-lg font-extrabold text-white`}>{person.full_name.slice(0, 1)}</span>}
+                      <div className="min-w-0">
+                        <Link to={`/in/${person.slug}`} className="block truncate text-base font-extrabold text-slate-950 hover:text-[#3a35e0]">{person.full_name}</Link>
+                        <p className="truncate text-sm text-slate-500">{person.headline || person.location || 'OneFlo profile'}</p>
+                      </div>
                     </div>
-                  </div>
-                  {person.looking_for ? <p className="mt-3 text-sm font-bold text-[#3a35e0]">Looking for {person.looking_for}</p> : <p className="mt-3 text-sm text-slate-500">Open to the right role</p>}
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {(person.skills ?? '').split(/[,\n]/).map((skill) => skill.trim()).filter(Boolean).slice(0, 3).map((skill) => <span key={skill} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{skill}</span>)}
-                  </div>
-                  <ConnectBox slug={person.slug} roleHint={person.looking_for} />
-                </article>
-              ))}
+                    <p className="mt-4 w-fit rounded-full bg-[#f3efff] px-3 py-1 text-xs font-bold text-[#5b2fc9]">{person.looking_for ? `Looking for ${person.looking_for}` : 'Open to the right role'}</p>
+                    {chips.length > 0 ? (
+                      <ul className="mt-3 flex flex-wrap gap-1.5">
+                        {chips.map((skill) => <li key={skill} className="rounded-full border border-[#ece7ff] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">{skill}</li>)}
+                      </ul>
+                    ) : <div className="mt-3 flex-1" />}
+                    <div className="mt-auto pt-4"><ConnectBox slug={person.slug} roleHint={person.looking_for} /></div>
+                  </article>
+                )
+              })}
             </div>
           </div>
         </section>

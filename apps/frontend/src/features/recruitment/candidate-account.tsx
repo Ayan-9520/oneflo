@@ -595,7 +595,7 @@ export function ConnectBox({ slug, roleHint }: { slug: string; roleHint?: string
   }
 
   if (sent) return <p className="mt-5 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Request sent. They will see it in their private profile.</p>
-  if (!open) return <button type="button" onClick={() => setOpen(true)} className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-[#3a35e0] to-[#e23d9a] px-4 py-2 text-sm font-semibold text-white">Connect</button>
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#120b2e] text-sm font-semibold text-white hover:bg-[#3a35e0]">Connect</button>
 
   return (
     <form onSubmit={(event) => void send(event)} className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4">
