@@ -137,6 +137,20 @@ class CandidateAccountTest extends TestCase
             'role' => 'HR Manager',
         ])->assertCreated();
 
+        $fan = \App\Models\CandidateAccount::query()->create([
+            'full_name' => 'Fan User',
+            'email' => 'fan-follow@example.com',
+            'password' => 'secret123',
+            'is_public' => true,
+            'public_slug' => 'fan-user',
+        ]);
+        $fanToken = $this->postJson('/api/v1/candidate/auth/password', ['email' => 'fan-follow@example.com', 'password' => 'secret123'])->assertOk()->json('data.token');
+        $this->postJson('/api/v1/candidate/me/follows/rishika-koli', [], ['Authorization' => 'Bearer '.$fanToken])->assertOk()->assertJsonPath('data.followers', 1);
+        $account->forceFill(['password' => 'secret123'])->save();
+        $owner = $this->postJson('/api/v1/candidate/auth/password', ['email' => 'public-profile@example.com', 'password' => 'secret123'])->assertOk()->json('data.token');
+        $this->getJson('/api/v1/candidate/me/followers', ['Authorization' => 'Bearer '.$owner])->assertOk()->assertJsonPath('data.0.name', 'Fan User');
+        unset($fan);
+
         $account->forceFill(['is_public' => false])->save();
         $this->getJson('/api/v1/careers/people/rishika-koli')->assertNotFound();
     }

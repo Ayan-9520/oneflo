@@ -126,7 +126,7 @@ export function CandidateLoginPage() {
 
   useEffect(() => {
     const next = search.get('next')
-    if (next?.startsWith('/careers')) window.sessionStorage.setItem(returnKey, next)
+    if (next?.startsWith('/careers') || next === '/home' || next.startsWith('/in/')) window.sessionStorage.setItem(returnKey, next)
   }, [search])
   useEffect(() => {
     setStep('form'); setCodeMode(false); setCode(''); setErrors({}); setError(null); setNeedsName(false); setDevCode(null)
@@ -144,7 +144,7 @@ export function CandidateLoginPage() {
     await queryClient.invalidateQueries({ queryKey: ['candidate-me'] })
     const target = window.sessionStorage.getItem(returnKey)
     window.sessionStorage.removeItem(returnKey)
-    navigate(target?.startsWith('/careers') ? target : '/careers/profile', { replace: true })
+    navigate(target && (target.startsWith('/careers') || target === '/home' || target.startsWith('/in/')) ? target : '/careers/profile', { replace: true })
   }
 
   async function run(action: () => Promise<void>) {

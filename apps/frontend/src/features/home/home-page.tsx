@@ -37,7 +37,7 @@ import { Link, useNavigate } from 'react-router'
 
 import { PublicFooter, PublicHeader, useScrollToHash } from '@/features/home/public-layout'
 import { apiData } from '@/lib/api'
-import { ConnectBox } from '@/features/recruitment/candidate-account'
+import { FollowButton } from '@/features/recruitment/candidate-account'
 
 type Job = {
   slug: string
@@ -318,7 +318,7 @@ export function HomePage() {
   const navigate = useNavigate()
   useScrollToHash()
   const listing = useQuery({ queryKey: ['careers', 'home'], queryFn: () => apiData<Listing>('/api/v1/careers'), retry: false })
-  const people = useQuery({ queryKey: ['public-people'], queryFn: () => apiData<Array<{ slug: string; full_name: string; avatar_url: string | null; headline: string | null; looking_for: string | null; location: string | null; skills: string | null }>>('/api/v1/careers/people'), retry: false })
+  const people = useQuery({ queryKey: ['public-people'], queryFn: () => apiData<Array<{ slug: string; full_name: string; avatar_url: string | null; headline: string | null; looking_for: string | null; location: string | null; skills: string | null; followers: number }>>('/api/v1/careers/people'), retry: false })
   const [form, setForm] = useState({ q: '', category: '', employment_type: '', experience: '', location: '' })
 
   const companies = listing.data?.companies ?? []
@@ -473,12 +473,12 @@ export function HomePage() {
       {(people.data ?? []).length > 0 ? (
         <section className="bg-[#f7f5ff] py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <SectionTitle title="People open to work" text="Public profiles. Connect if you need them for a role. Their letters, salary, and phone stay private." />
+            <SectionTitle title="People open to work" text="Follow someone to stay with their profile. They see their followers after they sign in." />
             <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {(people.data ?? []).map((person, index) => {
                 const accent = cardAccents[index % cardAccents.length]
-                const listed = (person.skills ?? '').split(/[,|\n]/).map((skill) => skill.trim()).filter(Boolean)
-                const chips = (listed.length > 1 ? listed : (person.skills ?? '').split(/\s+/).filter((skill) => skill.length > 1)).slice(0, 6)
+                const listed = (person.skills ?? '').split(/[,|\n]/).map((skill) => skill.trim()).filter((skill) => skill.length > 1 && skill.length < 28)
+                const chips = listed.length > 1 ? listed.slice(0, 4) : []
                 return (
                   <article key={person.slug} className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_rgb(28_20_51_/_0.06)]">
                     <span className={`-mx-5 -mt-5 mb-4 h-1.5 bg-gradient-to-r ${accent}`} />
@@ -497,7 +497,7 @@ export function HomePage() {
                         {chips.map((skill) => <li key={skill} className="rounded-full border border-[#ece7ff] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">{skill}</li>)}
                       </ul>
                     ) : <div className="mt-3 flex-1" />}
-                    <div className="mt-auto pt-4"><ConnectBox slug={person.slug} roleHint={person.looking_for} /></div>
+                    <div className="mt-auto pt-4"><FollowButton slug={person.slug} followers={person.followers ?? 0} compact /></div>
                   </article>
                 )
               })}

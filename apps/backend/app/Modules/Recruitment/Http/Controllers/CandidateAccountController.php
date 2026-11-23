@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\CandidateAccount;
 use App\Models\ProfileConnection;
+use App\Models\ProfileFollow;
 use App\Models\JobApplication;
 use App\Models\IssuedDocument;
 use App\Models\JobOffer;
@@ -108,7 +109,7 @@ class CandidateAccountController extends Controller
 
     public function publicPeople(): JsonResponse
     {
-        $rows = CandidateAccount::query()->where('is_public', true)->whereNotNull('public_slug')->orderByDesc('id')->limit(12)->get()
+        $rows = CandidateAccount::query()->withCount('followers')->where('is_public', true)->whereNotNull('public_slug')->orderByDesc('id')->limit(12)->get()
             ->map(fn (CandidateAccount $account): array => $this->publicCard($account))->all();
 
         return ApiResponse::data($rows);
@@ -117,6 +118,57 @@ class CandidateAccountController extends Controller
     public function publicProfile(string $slug): JsonResponse
     {
         return ApiResponse::data($this->publicCard($this->publicAccount($slug)));
+    }
+
+    public function follow(Request $request, string $slug): JsonResponse
+    {
+        $me = $this->account($request);
+        $them = $this->publicAccount($slug);
+        abort_if($me->id === $them->id, 422, 'You cannot follow your own profile.');
+        ProfileFollow::query()->firstOrCreate([
+            'follower_account_id' => $me->id,
+            'following_account_id' => $them->id,
+        ]);
+
+        return ApiResponse::data(['following' => true, 'followers' => $them->followers()->count()]);
+    }
+
+    public function unfollow(Request $request, string $slug): JsonResponse
+    {
+        $them = $this->publicAccount($slug);
+        ProfileFollow::query()->where('follower_account_id', $this->account($request)->id)->where('following_account_id', $them->id)->delete();
+
+        return ApiResponse::data(['following' => false, 'followers' => $them->followers()->count()]);
+    }
+
+    public function followers(Request $request): JsonResponse
+    {
+        $rows = ProfileFollow::query()->where('following_account_id', $this->account($request)->id)->with('follower')->latest('id')->limit(50)->get()
+            ->map(function (ProfileFollow $row): array {
+                $person = $row->follower;
+
+                return [
+                    'name' => $person?->full_name,
+                    'headline' => $person?->headline,
+                    'slug' => $person?->is_public ? $person->public_slug : null,
+                ];
+            })->all();
+
+        return ApiResponse::data($rows);
+    }
+
+    public function following(Request $request): JsonResponse
+    {
+        $slugs = ProfileFollow::query()->where('follower_account_id', $this->account($request)->id)
+            ->whereHas('following', fn ($query) => $query->where('is_public', true))
+            ->with('following:id,public_slug')
+            ->get()
+            ->map(fn (ProfileFollow $row) => $row->following?->public_slug)
+            ->filter()
+            ->values()
+            ->all();
+
+        return ApiResponse::data($slugs);
     }
 
     public function connect(Request $request, string $slug): JsonResponse
@@ -152,7 +204,7 @@ class CandidateAccountController extends Controller
 
     private function publicAccount(string $slug): CandidateAccount
     {
-        return CandidateAccount::query()->where('public_slug', $slug)->where('is_public', true)->firstOrFail();
+        return CandidateAccount::query()->withCount('followers')->where('public_slug', $slug)->where('is_public', true)->firstOrFail();
     }
 
     /**
@@ -162,6 +214,7 @@ class CandidateAccountController extends Controller
     {
         return [
             'slug' => $account->public_slug,
+            'followers' => (int) ($account->followers_count ?? $account->followers()->count()),
             'full_name' => $account->full_name,
             'avatar_url' => $account->avatar_url,
             'headline' => $account->headline,

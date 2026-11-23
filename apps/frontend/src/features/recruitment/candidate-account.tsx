@@ -99,7 +99,7 @@ export function useCandidate() {
 function takeReturn() {
   const path = window.sessionStorage.getItem(returnKey)
   window.sessionStorage.removeItem(returnKey)
-  return path && path.startsWith('/careers') ? path : '/careers/profile'
+  return path && (path.startsWith('/careers') || path === '/home' || path.startsWith('/in/')) ? path : '/careers/profile'
 }
 
 function Card({ children }: { children: ReactNode }) {
@@ -193,6 +193,27 @@ const stageStyles: Record<string, string> = {
 const stageOrder = ['applied', 'screening', 'interview', 'offer', 'hired']
 
 const fieldClass = 'h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-11 pr-4 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/15'
+
+function MyFollowers() {
+  const rows = useQuery({ queryKey: ['candidate-followers', candidateToken()], queryFn: () => candidateRequest<Array<{ name: string | null; headline: string | null; slug: string | null }>>('/api/v1/candidate/me/followers') })
+  const people = rows.data ?? []
+  return (
+    <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+      <h2 className="text-lg font-bold text-slate-900">Followers</h2>
+      <p className="text-sm text-slate-500">{people.length} {people.length === 1 ? 'person follows' : 'people follow'} you. Only you see this list.</p>
+      {people.length === 0 ? <p className="mt-4 text-sm text-slate-500">No followers yet.</p> : (
+        <ul className="mt-4 space-y-3">
+          {people.map((row, index) => (
+            <li key={`${row.slug ?? row.name}-${index}`} className="rounded-2xl bg-slate-50 px-4 py-3">
+              {row.slug ? <Link to={`/in/${row.slug}`} className="font-bold text-slate-900 hover:text-[#0a66c2]">{row.name}</Link> : <p className="font-bold text-slate-900">{row.name}</p>}
+              {row.headline ? <p className="text-sm text-slate-500">{row.headline}</p> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
 
 function MyConnections() {
   const rows = useQuery({ queryKey: ['candidate-connections', candidateToken()], queryFn: () => candidateRequest<Array<{ id: number; from_name: string; from_email: string; role: string; message: string | null; sent_on: string | null }>>('/api/v1/candidate/me/connections') })
@@ -452,6 +473,7 @@ export function CandidateProfilePage() {
 
             <MyOffers />
             <MyConnections />
+            <MyFollowers />
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
               <form id="candidate-profile-form" onSubmit={(event) => void save(event)} className="space-y-6">
@@ -571,46 +593,55 @@ export function CandidateProfilePage() {
   )
 }
 
-export function ConnectBox({ slug, roleHint }: { slug: string; roleHint?: string | null }) {
-  const [open, setOpen] = useState(false)
-  const [sent, setSent] = useState(false)
+export function FollowButton({ slug, followers, compact = false }: { slug: string; followers: number; compact?: boolean }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const mine = useCandidate()
+  const following = useQuery({
+    queryKey: ['candidate-following', candidateToken()],
+    enabled: candidateToken() !== null,
+    queryFn: () => candidateRequest<string[]>('/api/v1/candidate/me/following'),
+  })
+  const [count, setCount] = useState(followers)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const on = (following.data ?? []).includes(slug)
+  const self = mine.data?.public_slug === slug
 
-  async function send(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setBusy(true)
+  useEffect(() => setCount(followers), [followers])
+
+  async function toggle() {
+    if (!candidateToken()) {
+      window.sessionStorage.setItem(returnKey, window.location.pathname)
+      navigate('/careers/login')
+      return
+    }
     setError(null)
-    const body = Object.fromEntries(new FormData(event.currentTarget).entries())
     try {
-      const response = await apiFetch(`/api/v1/careers/people/${slug}/connect`, { method: 'POST', body: JSON.stringify(body) })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload.message ?? 'The request could not be sent.')
-      setSent(true)
+      const next = await candidateRequest<{ following: boolean; followers: number }>(`/api/v1/candidate/me/follows/${slug}`, { method: on ? 'DELETE' : 'POST' })
+      setCount(next.followers)
+      await queryClient.invalidateQueries({ queryKey: ['candidate-following'] })
+      await queryClient.invalidateQueries({ queryKey: ['candidate-followers'] })
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'The request could not be sent.')
-    } finally {
-      setBusy(false)
+      setError(caught instanceof Error ? caught.message : 'Follow could not be saved.')
     }
   }
 
-  if (sent) return <p className="mt-5 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Request sent. They will see it in their private profile.</p>
-  if (!open) return <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#120b2e] text-sm font-semibold text-white hover:bg-[#3a35e0]">Connect</button>
+  if (self) return <p className="text-sm font-semibold text-slate-500">{count} {count === 1 ? 'follower' : 'followers'}</p>
 
   return (
-    <form onSubmit={(event) => void send(event)} className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4">
-      <p className="text-sm font-bold text-slate-900">Connect about a role</p>
-      <input name="from_name" required placeholder="Your name" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
-      <input name="from_email" type="email" required placeholder="Your work email" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
-      <input name="role" required defaultValue={roleHint ?? ''} placeholder="Role you need them for" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
-      <textarea name="message" placeholder="Short note (optional)" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={2} />
-      {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
-      <button type="submit" disabled={busy} className="h-11 rounded-xl bg-[#3a35e0] text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Sending…' : 'Send request'}</button>
-    </form>
+    <div className={compact ? '' : 'mt-5'}>
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => void toggle()} className={`inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-semibold ${on ? 'border border-slate-300 bg-white text-slate-800' : 'bg-[#0a66c2] text-white'}`}>{on ? 'Following' : 'Follow'}</button>
+        <span className="text-sm font-semibold text-slate-500">{count} {count === 1 ? 'follower' : 'followers'}</span>
+      </div>
+      {error ? <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p> : null}
+    </div>
   )
 }
 
 type PublicPerson = {
+  slug?: string
+  followers?: number
   full_name: string
   avatar_url: string | null
   headline: string | null
@@ -678,7 +709,7 @@ export function PublicProfilePage() {
                 {skills.map((skill) => <li key={skill} className="rounded-full bg-[#f3efff] px-3 py-1 text-xs font-semibold text-[#3a35e0]">{skill}</li>)}
               </ul>
             ) : null}
-            <ConnectBox slug={slug} />
+            <FollowButton slug={slug} followers={profile.followers ?? 0} />
           </article>
         ) : null}
       </main>

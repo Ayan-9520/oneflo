@@ -74,6 +74,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/me/offers', [CandidateAccountController::class, 'offers']);
             Route::get('/me/letters', [CandidateAccountController::class, 'letters']);
             Route::get('/me/connections', [CandidateAccountController::class, 'connections']);
+            Route::get('/me/followers', [CandidateAccountController::class, 'followers']);
+            Route::get('/me/following', [CandidateAccountController::class, 'following']);
+            Route::post('/me/follows/{slug}', [CandidateAccountController::class, 'follow']);
+            Route::delete('/me/follows/{slug}', [CandidateAccountController::class, 'unfollow']);
             Route::get('/me/letters/{document}/pdf', [CandidateAccountController::class, 'letterPdf'])->whereNumber('document');
             Route::get('/me/offers/{offer}/letter', [CandidateAccountController::class, 'offerLetter'])->whereNumber('offer');
             Route::post('/me/offers/{offer}/{decision}', [CandidateAccountController::class, 'respondOffer'])->whereNumber('offer')->whereIn('decision', ['accept', 'decline']);

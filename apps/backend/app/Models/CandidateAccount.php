@@ -56,4 +56,9 @@ class CandidateAccount extends Model
     {
         return $this->hasMany(CandidateToken::class);
     }
+
+    public function followers(): HasMany
+    {
+        return $this->hasMany(ProfileFollow::class, 'following_account_id');
+    }
 }
