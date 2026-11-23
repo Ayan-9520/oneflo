@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -98,7 +99,28 @@ class CandidateAccountController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return ApiResponse::data($this->profile($this->account($request)));
+        $account = $this->account($request);
+        $this->ensureSlug($account);
+
+        return ApiResponse::data($this->profile($account));
+    }
+
+    public function publicProfile(string $slug): JsonResponse
+    {
+        $account = CandidateAccount::query()->where('public_slug', $slug)->where('is_public', true)->firstOrFail();
+
+        return ApiResponse::data([
+            'full_name' => $account->full_name,
+            'avatar_url' => $account->avatar_url,
+            'headline' => $account->headline,
+            'location' => $account->location,
+            'experience_years' => $account->experience_years,
+            'current_company' => $account->current_company,
+            'current_designation' => $account->current_designation,
+            'qualification' => $account->qualification,
+            'skills' => $account->skills,
+            'work_status' => $account->work_status,
+        ]);
     }
 
     public function update(Request $request): JsonResponse
@@ -117,8 +139,10 @@ class CandidateAccountController extends Controller
             'notice_period' => ['nullable', 'string', 'max:80'],
             'qualification' => ['nullable', 'string', 'max:160'],
             'skills' => ['nullable', 'string', 'max:1000'],
+            'is_public' => ['sometimes', 'boolean'],
         ]);
         $account->fill($data)->save();
+        $this->ensureSlug($account);
 
         return ApiResponse::data($this->profile($account));
     }
@@ -265,6 +289,23 @@ class CandidateAccountController extends Controller
         return ApiResponse::data(['token' => $session['token'], 'account' => $this->profile($session['account'])], $status);
     }
 
+    private function ensureSlug(CandidateAccount $account): void
+    {
+        if (is_string($account->public_slug) && $account->public_slug !== '') {
+            return;
+        }
+        $base = Str::slug((string) $account->full_name) ?: 'profile';
+        $base = Str::limit($base, 48, '');
+        $slug = $base;
+        $n = 2;
+        while (CandidateAccount::query()->where('public_slug', $slug)->exists()) {
+            $slug = $base.'-'.$n;
+            $n++;
+        }
+        $account->public_slug = $slug;
+        $account->save();
+    }
+
     private function account(Request $request): CandidateAccount
     {
         return $request->attributes->get('candidate_account');
@@ -276,7 +317,7 @@ class CandidateAccountController extends Controller
     private function profile(CandidateAccount $account): array
     {
         return [
-            ...$account->only(['id', 'full_name', 'email', 'phone', 'avatar_url', 'headline', 'work_status', 'location', 'experience_years', 'current_company', 'current_designation', 'current_salary', 'expected_salary', 'notice_period', 'qualification', 'skills']),
+            ...$account->only(['id', 'full_name', 'email', 'phone', 'avatar_url', 'headline', 'work_status', 'location', 'experience_years', 'current_company', 'current_designation', 'current_salary', 'expected_salary', 'notice_period', 'qualification', 'skills', 'public_slug', 'is_public']),
             'email_verified' => $account->email_verified_at !== null,
             'phone_verified' => $account->phone_verified_at !== null,
             'has_password' => $account->password !== null,

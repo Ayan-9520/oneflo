@@ -109,6 +109,31 @@ class CandidateAccountTest extends TestCase
         $this->getJson('/api/v1/candidate/me', ['Authorization' => 'Bearer '.$token])->assertOk()->assertJsonPath('data.phone', '9876543210');
     }
 
+    public function test_public_profile_hides_letters_and_private_fields(): void
+    {
+        $account = \App\Models\CandidateAccount::query()->create([
+            'full_name' => 'Rishika Koli',
+            'email' => 'public-profile@example.com',
+            'phone' => '9000000001',
+            'headline' => 'HR manager',
+            'location' => 'Indore',
+            'current_salary' => '6 LPA',
+            'skills' => 'Hiring, Payroll',
+            'is_public' => true,
+        ]);
+        $account->forceFill(['public_slug' => 'rishika-koli'])->save();
+
+        $this->getJson('/api/v1/careers/people/rishika-koli')->assertOk()
+            ->assertJsonPath('data.full_name', 'Rishika Koli')
+            ->assertJsonPath('data.headline', 'HR manager')
+            ->assertJsonMissingPath('data.email')
+            ->assertJsonMissingPath('data.phone')
+            ->assertJsonMissingPath('data.current_salary');
+
+        $account->forceFill(['is_public' => false])->save();
+        $this->getJson('/api/v1/careers/people/rishika-koli')->assertNotFound();
+    }
+
     public function test_code_requests_are_rate_limited(): void
     {
         Mail::fake();

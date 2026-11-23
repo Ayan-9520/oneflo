@@ -18,7 +18,7 @@ import { LeavePage } from '@/features/attendance/leave-page'
 import { PayrollPage } from '@/features/payroll/payroll-page'
 import { AssetsPage, EngagementPage, ExpensesPage, HelpdeskPage, PerformancePage } from '@/features/operations/operations-pages'
 import { OnboardingPage } from '@/features/recruitment/onboarding-page'
-import { CandidateOAuthCallback, CandidateProfilePage } from '@/features/recruitment/candidate-account'
+import { CandidateOAuthCallback, CandidateProfilePage, PublicProfilePage } from '@/features/recruitment/candidate-account'
 import { CandidateLoginPage } from '@/features/recruitment/candidate-auth-page'
 import { CareerJobPage, CareersPage } from '@/features/recruitment/careers-page'
 import { OfferResponsePage } from '@/features/recruitment/offer-response-page'
@@ -106,6 +106,7 @@ const router = createBrowserRouter([
   { path: '/careers/login', element: <CandidateLoginPage /> },
   { path: '/careers/auth/:provider', element: <CandidateOAuthCallback /> },
   { path: '/careers/profile', element: <CandidateProfilePage /> },
+  { path: '/in/:slug', element: <PublicProfilePage /> },
   { path: '/careers/:company', element: <CareersPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },

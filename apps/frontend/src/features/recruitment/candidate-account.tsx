@@ -55,6 +55,8 @@ export type CandidateProfile = {
   email_verified: boolean
   phone_verified: boolean
   linked: { google: boolean; linkedin: boolean }
+  public_slug: string | null
+  is_public: boolean
 }
 type MyOffer = { id: number; designation: string; compensation_note: string; status: 'sent' | 'accepted' | 'declined'; job_title: string | null; company: string | null; sent_on: string | null; answered_on: string | null }
 type MyLetter = { id: number; type: string; label: string; number: string; company: string | null; issued_on: string }
@@ -326,7 +328,8 @@ export function CandidateProfilePage() {
     setSaved(false)
     setSaving(true)
     const body = Object.fromEntries(new FormData(event.currentTarget).entries())
-    const payload = Object.fromEntries(Object.entries(body).map(([key, value]) => [key, String(value).trim() === '' ? null : key === 'experience_years' ? Number(value) : String(value).trim()]))
+    const payload = Object.fromEntries(Object.entries(body).map(([key, value]) => [key, String(value).trim() === '' ? null : key === 'experience_years' ? Number(value) : key === 'is_public' ? value === 'on' : String(value).trim()]))
+    if (!('is_public' in body)) payload.is_public = false
     try {
       const profile = await candidateRequest<CandidateProfile>('/api/v1/candidate/me', { method: 'PUT', body: JSON.stringify(payload) })
       queryClient.setQueryData(['candidate-me', candidateToken()], profile)
@@ -410,10 +413,24 @@ export function CandidateProfilePage() {
               </div>
             </div>
 
+            {profile.public_slug ? (
+              <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-[#e7e2ff] bg-[#f7f5ff] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="min-w-0 text-sm text-slate-700">
+                  <span className="font-bold text-slate-900">Public link. </span>
+                  <Link to={`/in/${profile.public_slug}`} className="break-all font-semibold text-[#3a35e0]">/in/{profile.public_slug}</Link>
+                  <span className="mt-1 block text-xs text-slate-500">Name, photo, headline, and experience are visible. Letters, salary, phone, and email stay on this page only.</span>
+                </p>
+                <label className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-800">
+                  <input name="is_public" type="checkbox" defaultChecked={profile.is_public} form="candidate-profile-form" className="size-4 accent-[#3a35e0]" />
+                  Show publicly
+                </label>
+              </div>
+            ) : null}
+
             <MyOffers />
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-              <form onSubmit={(event) => void save(event)} className="space-y-6">
+              <form id="candidate-profile-form" onSubmit={(event) => void save(event)} className="space-y-6">
                 {profileSections.map((section) => (
                   <section key={section.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgb(15_23_42_/_0.04)] sm:p-7">
                     <div className="flex items-center gap-3">
@@ -519,12 +536,85 @@ export function CandidateProfilePage() {
                       <div className="flex-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Linked accounts</p><p className="font-medium text-slate-800">{[profile.linked.google ? 'Google' : null, profile.linked.linkedin ? 'LinkedIn' : null].filter(Boolean).join(', ') || 'None'}</p></div>
                     </li>
                   </ul>
-                  <p className="mt-4 text-xs leading-5 text-slate-500">Your profile is private. It is shared only with the companies you apply to.</p>
+                  <p className="mt-4 text-xs leading-5 text-slate-500">Letters, salary, phone, and email stay here. They are not on your public link.</p>
                 </section>
               </aside>
             </div>
           </>
         )}
+      </main>
+    </CareersShell>
+  )
+}
+
+type PublicPerson = {
+  full_name: string
+  avatar_url: string | null
+  headline: string | null
+  location: string | null
+  experience_years: number | null
+  current_company: string | null
+  current_designation: string | null
+  qualification: string | null
+  skills: string | null
+  work_status: string | null
+}
+
+export function PublicProfilePage() {
+  const { slug = '' } = useParams()
+  const person = useQuery({
+    queryKey: ['public-profile', slug],
+    enabled: slug !== '',
+    queryFn: async () => {
+      const response = await apiFetch(`/api/v1/careers/people/${slug}`)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error('This profile is not public.')
+      return payload.data as PublicPerson
+    },
+  })
+  const profile = person.data
+  const skills = (profile?.skills ?? '').split(/[,\n]/).map((skill) => skill.trim()).filter(Boolean)
+  const role = profile ? [profile.current_designation, profile.current_company ? `at ${profile.current_company}` : null].filter(Boolean).join(' ') : ''
+
+  return (
+    <CareersShell>
+      <section className="relative h-40 overflow-hidden bg-gradient-to-r from-[#ffd1e8] via-[#e9dcff] to-[#cfe0ff] sm:h-48">
+        <div className="pointer-events-none absolute -left-20 -top-24 size-80 rounded-full bg-[#ff8fc7]/40 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 right-0 size-96 rounded-full bg-[#8fb8ff]/50 blur-3xl" />
+      </section>
+      <main className="relative mx-auto -mt-20 max-w-3xl px-4 pb-16 sm:px-6">
+        {person.isLoading ? <div className="h-56 animate-pulse rounded-3xl bg-white" /> : null}
+        {person.isError ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center">
+            <h1 className="text-xl font-bold text-slate-900">This profile is not available</h1>
+            <p className="mt-2 text-sm text-slate-500">The link may be wrong, or the person has turned their public profile off.</p>
+            <Link to="/careers" className="mt-5 inline-flex rounded-xl bg-[#3a35e0] px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
+          </div>
+        ) : null}
+        {profile ? (
+          <article className="rounded-3xl border border-white bg-white/95 p-6 shadow-[0_24px_60px_rgb(109_56_214_/_0.12)] sm:p-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              {profile.avatar_url
+                ? <img src={profile.avatar_url} alt="" className="size-24 rounded-full border-4 border-white object-cover shadow-md" />
+                : <span className="flex size-24 items-center justify-center rounded-full bg-gradient-to-br from-[#eef0ff] to-[#fdeaf4] text-4xl font-extrabold text-[#3a35e0]">{profile.full_name.slice(0, 1).toUpperCase()}</span>}
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">{profile.full_name}</h1>
+                <p className="mt-1 text-slate-600">{profile.headline || role || 'OneFlo profile'}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
+                  {profile.location ? <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><MapPin className="size-3.5" />{profile.location}</span> : null}
+                  {profile.experience_years != null ? <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><Briefcase className="size-3.5" />{profile.experience_years} {profile.experience_years === 1 ? 'year' : 'years'}</span> : null}
+                  {profile.qualification ? <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><GraduationCap className="size-3.5" />{profile.qualification}</span> : null}
+                </div>
+              </div>
+            </div>
+            {role ? <p className="mt-6 text-sm font-semibold text-slate-800">{role}</p> : null}
+            {skills.length > 0 ? (
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {skills.map((skill) => <li key={skill} className="rounded-full bg-[#f3efff] px-3 py-1 text-xs font-semibold text-[#3a35e0]">{skill}</li>)}
+              </ul>
+            ) : null}
+          </article>
+        ) : null}
       </main>
     </CareersShell>
   )
