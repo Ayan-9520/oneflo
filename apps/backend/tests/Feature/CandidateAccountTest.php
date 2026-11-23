@@ -130,6 +130,13 @@ class CandidateAccountTest extends TestCase
             ->assertJsonMissingPath('data.phone')
             ->assertJsonMissingPath('data.current_salary');
 
+        $this->getJson('/api/v1/careers/people')->assertOk()->assertJsonFragment(['slug' => 'rishika-koli']);
+        $this->postJson('/api/v1/careers/people/rishika-koli/connect', [
+            'from_name' => 'Hiring Manager',
+            'from_email' => 'hr@example.com',
+            'role' => 'HR Manager',
+        ])->assertCreated();
+
         $account->forceFill(['is_public' => false])->save();
         $this->getJson('/api/v1/careers/people/rishika-koli')->assertNotFound();
     }

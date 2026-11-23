@@ -43,6 +43,7 @@ export type CandidateProfile = {
   phone: string | null
   avatar_url: string | null
   headline: string | null
+  looking_for: string | null
   location: string | null
   experience_years: number | null
   current_company: string | null
@@ -156,6 +157,7 @@ const profileSections: Array<{ title: string; text: string; icon: LucideIcon; gr
     fields: [
       { name: 'full_name', label: 'Full name', icon: UserRound },
       { name: 'headline', label: 'Headline', placeholder: 'e.g. Sales executive with 3 years in fintech', icon: Sparkles },
+      { name: 'looking_for', label: 'Role you want', placeholder: 'e.g. HR Manager', icon: Search },
       { name: 'location', label: 'Current location', placeholder: 'City', icon: MapPin },
       { name: 'qualification', label: 'Highest qualification', placeholder: 'e.g. B.Com, MBA', icon: GraduationCap },
     ],
@@ -191,6 +193,27 @@ const stageStyles: Record<string, string> = {
 const stageOrder = ['applied', 'screening', 'interview', 'offer', 'hired']
 
 const fieldClass = 'h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-11 pr-4 text-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#8b5cf6] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/15'
+
+function MyConnections() {
+  const rows = useQuery({ queryKey: ['candidate-connections', candidateToken()], queryFn: () => candidateRequest<Array<{ id: number; from_name: string; from_email: string; role: string; message: string | null; sent_on: string | null }>>('/api/v1/candidate/me/connections') })
+  const people = rows.data ?? []
+  if (people.length === 0) return null
+  return (
+    <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+      <h2 className="text-lg font-bold text-slate-900">Connection requests</h2>
+      <p className="text-sm text-slate-500">People who want to talk to you about a role. Only you can see their email.</p>
+      <ul className="mt-4 space-y-3">
+        {people.map((row) => (
+          <li key={row.id} className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="font-bold text-slate-900">{row.from_name} <span className="font-medium text-slate-500">wants you for {row.role}</span></p>
+            <a href={`mailto:${row.from_email}`} className="text-sm font-semibold text-[#3a35e0]">{row.from_email}</a>
+            {row.message ? <p className="mt-1 text-sm text-slate-600">{row.message}</p> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
 
 function MyOffers() {
   const queryClient = useQueryClient()
@@ -428,6 +451,7 @@ export function CandidateProfilePage() {
             ) : null}
 
             <MyOffers />
+            <MyConnections />
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
               <form id="candidate-profile-form" onSubmit={(event) => void save(event)} className="space-y-6">
@@ -547,10 +571,50 @@ export function CandidateProfilePage() {
   )
 }
 
+export function ConnectBox({ slug, roleHint }: { slug: string; roleHint?: string | null }) {
+  const [open, setOpen] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function send(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true)
+    setError(null)
+    const body = Object.fromEntries(new FormData(event.currentTarget).entries())
+    try {
+      const response = await apiFetch(`/api/v1/careers/people/${slug}/connect`, { method: 'POST', body: JSON.stringify(body) })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message ?? 'The request could not be sent.')
+      setSent(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The request could not be sent.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (sent) return <p className="mt-5 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Request sent. They will see it in their private profile.</p>
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-[#3a35e0] to-[#e23d9a] px-4 py-2 text-sm font-semibold text-white">Connect</button>
+
+  return (
+    <form onSubmit={(event) => void send(event)} className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4">
+      <p className="text-sm font-bold text-slate-900">Connect about a role</p>
+      <input name="from_name" required placeholder="Your name" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+      <input name="from_email" type="email" required placeholder="Your work email" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+      <input name="role" required defaultValue={roleHint ?? ''} placeholder="Role you need them for" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+      <textarea name="message" placeholder="Short note (optional)" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={2} />
+      {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
+      <button type="submit" disabled={busy} className="h-11 rounded-xl bg-[#3a35e0] text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Sending…' : 'Send request'}</button>
+    </form>
+  )
+}
+
 type PublicPerson = {
   full_name: string
   avatar_url: string | null
   headline: string | null
+  looking_for: string | null
   location: string | null
   experience_years: number | null
   current_company: string | null
@@ -607,12 +671,14 @@ export function PublicProfilePage() {
                 </div>
               </div>
             </div>
-            {role ? <p className="mt-6 text-sm font-semibold text-slate-800">{role}</p> : null}
+            {profile.looking_for ? <p className="mt-6 inline-flex rounded-full bg-[#f3efff] px-3 py-1 text-sm font-bold text-[#3a35e0]">Open to {profile.looking_for}</p> : null}
+            {role ? <p className="mt-3 text-sm font-semibold text-slate-800">{role}</p> : null}
             {skills.length > 0 ? (
               <ul className="mt-4 flex flex-wrap gap-2">
                 {skills.map((skill) => <li key={skill} className="rounded-full bg-[#f3efff] px-3 py-1 text-xs font-semibold text-[#3a35e0]">{skill}</li>)}
               </ul>
             ) : null}
+            <ConnectBox slug={slug} />
           </article>
         ) : null}
       </main>

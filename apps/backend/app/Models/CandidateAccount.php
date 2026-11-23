@@ -17,6 +17,7 @@ class CandidateAccount extends Model
         'linkedin_id',
         'avatar_url',
         'headline',
+        'looking_for',
         'location',
         'experience_years',
         'current_company',

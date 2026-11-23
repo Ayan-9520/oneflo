@@ -50,7 +50,9 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/careers/companies/{slug}', [CareersController::class, 'company'])->middleware('throttle:careers');
     Route::get('/careers/companies/{slug}/logo', [CareersController::class, 'logo']);
     Route::get('/careers/jobs/{slug}', [CareersController::class, 'show'])->middleware('throttle:careers');
+    Route::get('/careers/people', [CandidateAccountController::class, 'publicPeople'])->middleware('throttle:careers');
     Route::get('/careers/people/{slug}', [CandidateAccountController::class, 'publicProfile'])->middleware('throttle:careers');
+    Route::post('/careers/people/{slug}/connect', [CandidateAccountController::class, 'connect'])->middleware('throttle:careers');
     Route::get('/careers/offer-response/{token}', [CareersController::class, 'offerByToken'])->middleware('throttle:careers');
     Route::get('/careers/offer-response/{token}/letter', [CareersController::class, 'offerLetterByToken'])->middleware('throttle:careers');
     Route::post('/careers/offer-response/{token}/{decision}', [CareersController::class, 'respondByToken'])->whereIn('decision', ['accept', 'decline'])->middleware('throttle:careers');
@@ -71,6 +73,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/me/applications', [CandidateAccountController::class, 'applications']);
             Route::get('/me/offers', [CandidateAccountController::class, 'offers']);
             Route::get('/me/letters', [CandidateAccountController::class, 'letters']);
+            Route::get('/me/connections', [CandidateAccountController::class, 'connections']);
             Route::get('/me/letters/{document}/pdf', [CandidateAccountController::class, 'letterPdf'])->whereNumber('document');
             Route::get('/me/offers/{offer}/letter', [CandidateAccountController::class, 'offerLetter'])->whereNumber('offer');
             Route::post('/me/offers/{offer}/{decision}', [CandidateAccountController::class, 'respondOffer'])->whereNumber('offer')->whereIn('decision', ['accept', 'decline']);

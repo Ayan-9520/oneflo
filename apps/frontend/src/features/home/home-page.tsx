@@ -37,6 +37,7 @@ import { Link, useNavigate } from 'react-router'
 
 import { PublicFooter, PublicHeader, useScrollToHash } from '@/features/home/public-layout'
 import { apiData } from '@/lib/api'
+import { ConnectBox } from '@/features/recruitment/candidate-account'
 
 type Job = {
   slug: string
@@ -317,6 +318,7 @@ export function HomePage() {
   const navigate = useNavigate()
   useScrollToHash()
   const listing = useQuery({ queryKey: ['careers', 'home'], queryFn: () => apiData<Listing>('/api/v1/careers'), retry: false })
+  const people = useQuery({ queryKey: ['public-people'], queryFn: () => apiData<Array<{ slug: string; full_name: string; avatar_url: string | null; headline: string | null; looking_for: string | null; location: string | null; skills: string | null }>>('/api/v1/careers/people'), retry: false })
   const [form, setForm] = useState({ q: '', category: '', employment_type: '', experience: '', location: '' })
 
   const companies = listing.data?.companies ?? []
@@ -467,6 +469,32 @@ export function HomePage() {
         <style>{'@keyframes oneflo-card{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}'}</style>
         <div className="mt-10 text-center"><Link to="/careers#jobs" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-6 py-3 text-sm font-semibold hover:border-[#3a35e0] hover:text-[#3a35e0]">View all jobs <ArrowRight className="size-4" /></Link></div>
       </section>
+
+      {(people.data ?? []).length > 0 ? (
+        <section className="bg-[#f7f5ff] py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionTitle title="People open to work" text="Public profiles. Connect if you need them for a role. Their letters, salary, and phone stay private." />
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(people.data ?? []).map((person) => (
+                <article key={person.slug} className="flex flex-col rounded-2xl border border-white bg-white p-5 shadow-[0_10px_30px_rgb(109_56_214_/_0.08)]">
+                  <div className="flex items-center gap-3">
+                    {person.avatar_url ? <img src={person.avatar_url} alt="" className="size-12 rounded-full object-cover" /> : <span className="flex size-12 items-center justify-center rounded-full bg-[#efeaff] text-lg font-extrabold text-[#3a35e0]">{person.full_name.slice(0, 1)}</span>}
+                    <div className="min-w-0">
+                      <Link to={`/in/${person.slug}`} className="block truncate text-base font-extrabold text-slate-950 hover:text-[#3a35e0]">{person.full_name}</Link>
+                      <p className="truncate text-sm text-slate-500">{person.headline || person.location || 'OneFlo profile'}</p>
+                    </div>
+                  </div>
+                  {person.looking_for ? <p className="mt-3 text-sm font-bold text-[#3a35e0]">Looking for {person.looking_for}</p> : <p className="mt-3 text-sm text-slate-500">Open to the right role</p>}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(person.skills ?? '').split(/[,\n]/).map((skill) => skill.trim()).filter(Boolean).slice(0, 3).map((skill) => <span key={skill} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{skill}</span>)}
+                  </div>
+                  <ConnectBox slug={person.slug} roleHint={person.looking_for} />
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section id="categories" className="bg-[#f6f5fd] py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">

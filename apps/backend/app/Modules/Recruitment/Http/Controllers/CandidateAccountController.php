@@ -5,6 +5,7 @@ namespace App\Modules\Recruitment\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\CandidateAccount;
+use App\Models\ProfileConnection;
 use App\Models\JobApplication;
 use App\Models\IssuedDocument;
 use App\Models\JobOffer;
@@ -105,14 +106,66 @@ class CandidateAccountController extends Controller
         return ApiResponse::data($this->profile($account));
     }
 
+    public function publicPeople(): JsonResponse
+    {
+        $rows = CandidateAccount::query()->where('is_public', true)->whereNotNull('public_slug')->orderByDesc('id')->limit(12)->get()
+            ->map(fn (CandidateAccount $account): array => $this->publicCard($account))->all();
+
+        return ApiResponse::data($rows);
+    }
+
     public function publicProfile(string $slug): JsonResponse
     {
-        $account = CandidateAccount::query()->where('public_slug', $slug)->where('is_public', true)->firstOrFail();
+        return ApiResponse::data($this->publicCard($this->publicAccount($slug)));
+    }
 
-        return ApiResponse::data([
+    public function connect(Request $request, string $slug): JsonResponse
+    {
+        $account = $this->publicAccount($slug);
+        $data = $request->validate([
+            'from_name' => ['required', 'string', 'max:160'],
+            'from_email' => ['required', 'email', 'max:160'],
+            'role' => ['required', 'string', 'max:160'],
+            'message' => ['nullable', 'string', 'max:500'],
+        ]);
+        $recent = ProfileConnection::query()->where('candidate_account_id', $account->id)->where('from_email', $data['from_email'])->where('created_at', '>=', now()->subDay())->exists();
+        abort_if($recent, 422, 'You already sent a request to this person today.');
+        ProfileConnection::query()->create([...$data, 'candidate_account_id' => $account->id]);
+
+        return ApiResponse::data(['sent' => true], 201);
+    }
+
+    public function connections(Request $request): JsonResponse
+    {
+        $rows = ProfileConnection::query()->where('candidate_account_id', $this->account($request)->id)->orderByDesc('id')->limit(50)->get()
+            ->map(fn (ProfileConnection $row): array => [
+                'id' => $row->id,
+                'from_name' => $row->from_name,
+                'from_email' => $row->from_email,
+                'role' => $row->role,
+                'message' => $row->message,
+                'sent_on' => $row->created_at?->toDateString(),
+            ])->all();
+
+        return ApiResponse::data($rows);
+    }
+
+    private function publicAccount(string $slug): CandidateAccount
+    {
+        return CandidateAccount::query()->where('public_slug', $slug)->where('is_public', true)->firstOrFail();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function publicCard(CandidateAccount $account): array
+    {
+        return [
+            'slug' => $account->public_slug,
             'full_name' => $account->full_name,
             'avatar_url' => $account->avatar_url,
             'headline' => $account->headline,
+            'looking_for' => $account->looking_for,
             'location' => $account->location,
             'experience_years' => $account->experience_years,
             'current_company' => $account->current_company,
@@ -120,7 +173,7 @@ class CandidateAccountController extends Controller
             'qualification' => $account->qualification,
             'skills' => $account->skills,
             'work_status' => $account->work_status,
-        ]);
+        ];
     }
 
     public function update(Request $request): JsonResponse
@@ -129,6 +182,7 @@ class CandidateAccountController extends Controller
         $data = $request->validate([
             'full_name' => ['required', 'string', 'max:160'],
             'headline' => ['nullable', 'string', 'max:160'],
+            'looking_for' => ['nullable', 'string', 'max:160'],
             'work_status' => ['nullable', Rule::in(['fresher', 'experienced'])],
             'location' => ['nullable', 'string', 'max:120'],
             'experience_years' => ['nullable', 'integer', 'between:0,60'],
@@ -317,7 +371,7 @@ class CandidateAccountController extends Controller
     private function profile(CandidateAccount $account): array
     {
         return [
-            ...$account->only(['id', 'full_name', 'email', 'phone', 'avatar_url', 'headline', 'work_status', 'location', 'experience_years', 'current_company', 'current_designation', 'current_salary', 'expected_salary', 'notice_period', 'qualification', 'skills', 'public_slug', 'is_public']),
+            ...$account->only(['id', 'full_name', 'email', 'phone', 'avatar_url', 'headline', 'looking_for', 'work_status', 'location', 'experience_years', 'current_company', 'current_designation', 'current_salary', 'expected_salary', 'notice_period', 'qualification', 'skills', 'public_slug', 'is_public']),
             'email_verified' => $account->email_verified_at !== null,
             'phone_verified' => $account->phone_verified_at !== null,
             'has_password' => $account->password !== null,
